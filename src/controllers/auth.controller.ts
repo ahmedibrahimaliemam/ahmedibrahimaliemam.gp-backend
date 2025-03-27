@@ -64,3 +64,11 @@ export const login: RequestHandler = async (req, res): Promise<void> => {
     res.status(500).json({ message: "Error logging in" });
   }
 };
+export const getAllAdmins: RequestHandler = async (req, res): Promise<void> => {
+  try {
+    const admins = await Admin.find({}, "_id name"); // Fetch only necessary fields
+    res.status(200).json(admins);
+  } catch (error) {
+    res.status(500).json({ message: "Error retrieving admins" });
+  }
+};
