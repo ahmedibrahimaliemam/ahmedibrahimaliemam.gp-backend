@@ -37,6 +37,12 @@ const mongoose_1 = __importStar(require("mongoose"));
 const CoachSchema = new mongoose_1.Schema({
     _id: { type: String, required: true }, // Phone number as _id
     name: { type: String, required: true },
+    email: {
+        type: String,
+        required: true,
+        unique: true,
+        match: [/^\S+@\S+\.\S+$/, "Invalid email format"] // Basic email validation
+    },
     teamId: { type: String, ref: "Team", required: true }, // ✅ Use String instead of ObjectId
     phoneNumber: { type: String, required: true },
     password: { type: String, required: true },
