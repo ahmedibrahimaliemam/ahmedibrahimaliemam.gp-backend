@@ -10,7 +10,7 @@ interface ICoach extends Document {
 }
 
 const CoachSchema = new Schema<ICoach>({
-  _id: { type: String, required: true }, // Phone number as _id
+  //_id: { type: String, required: true }, // Phone number as _id
   name: { type: String, required: true },
   email: { 
     type: String, 

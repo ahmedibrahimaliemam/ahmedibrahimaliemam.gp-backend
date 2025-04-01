@@ -34,15 +34,11 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 const mongoose_1 = __importStar(require("mongoose"));
-const AdminSchema = new mongoose_1.Schema({
-    //_id: { type: String, required: true, unique: true }, // Ensuring phone number is unique
-    email: {
-        type: String,
-        required: true,
-        unique: true,
-        match: [/^\S+@\S+\.\S+$/, "Invalid email format"] // Basic email validation
-    },
+const parentSchema = new mongoose_1.Schema({
     name: { type: String, required: true },
+    email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
+    children: [{ type: mongoose_1.default.Schema.Types.ObjectId, ref: "Player" }],
 });
-exports.default = mongoose_1.default.model("Admin", AdminSchema);
+const Parent = mongoose_1.default.model("Parent", parentSchema);
+exports.default = Parent;

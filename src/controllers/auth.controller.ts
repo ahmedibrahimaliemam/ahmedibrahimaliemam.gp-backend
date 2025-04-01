@@ -6,6 +6,7 @@ import dotenv from "dotenv";
 import Player from "../models/player.model";
 import Coach from "../models/coach.model";
 import Admin from "../models/admin.model";
+import Parent from "../models/parent.model";
 
 dotenv.config();
 
@@ -61,7 +62,7 @@ const handleValidationErrors: RequestHandler = (req, res, next): void => {
 const registerAdmin: RequestHandler = async (req, res): Promise<void> => {
   console.log(`helooooooooo`)
   try {
-    const { _id, name, email, password, secretCode } = req.body;
+    const { name, email, password, secretCode } = req.body;
 
     if (secretCode !== process.env.ADMIN_SECRET) {
       res.status(403).json({ message: "Invalid secret code" });
@@ -75,7 +76,7 @@ const registerAdmin: RequestHandler = async (req, res): Promise<void> => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const admin = await Admin.create({ _id, name, email, password: hashedPassword });
+    const admin = await Admin.create({  name, email, password: hashedPassword });
     console.log(email,"hahahha");
     
 
@@ -88,7 +89,7 @@ const registerAdmin: RequestHandler = async (req, res): Promise<void> => {
 // ✅ Register Coach (Only Admin Can Register)
 const registerCoach: RequestHandler = async (req, res): Promise<void> => {
   try {
-    const { _id, name, email, phoneNumber, teamId, password } = req.body;
+    const {  name, email, phoneNumber, teamId, password } = req.body;
 
     const existingCoach = await Coach.findOne({ email });
     if (existingCoach) {
@@ -97,7 +98,7 @@ const registerCoach: RequestHandler = async (req, res): Promise<void> => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const coach = await Coach.create({ _id, name, email, phoneNumber, teamId, password: hashedPassword });
+    const coach = await Coach.create({  name, email, phoneNumber, teamId, password: hashedPassword });
 
     res.status(201).json({ message: "Coach registered", token: generateToken(coach._id, "coach") });
   } catch (error) {
@@ -108,7 +109,7 @@ const registerCoach: RequestHandler = async (req, res): Promise<void> => {
 // ✅ Register Player (Only Admin Can Register)
 const registerPlayer: RequestHandler = async (req, res): Promise<void> => {
   try {
-    const { _id, name, email, position, coachId, teamId, password } = req.body;
+    const { name, email, position, coachId, teamId, password } = req.body;
 
     const existingPlayer = await Player.findOne({ email });
     if (existingPlayer) {
@@ -117,7 +118,7 @@ const registerPlayer: RequestHandler = async (req, res): Promise<void> => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const player = await Player.create({ _id, name, email, position, coachId, teamId, password: hashedPassword });
+    const player = await Player.create({  name, email, position, coachId, teamId, password: hashedPassword });
 
     res.status(201).json({ message: "Player registered", token: generateToken(player._id, "player") });
   } catch (error) {
@@ -126,6 +127,7 @@ const registerPlayer: RequestHandler = async (req, res): Promise<void> => {
 };
 
 // ✅ Login
+// ✅ Login with Auto-Registration for Parents
 const login: RequestHandler = async (req, res): Promise<void> => {
   try {
     const { email, password, role } = req.body;
@@ -136,12 +138,44 @@ const login: RequestHandler = async (req, res): Promise<void> => {
     }
 
     let user;
-    if (role === "player") user = await Player.findOne({ email });
-    else if (role === "coach") user = await Coach.findOne({ email });
-    else if (role === "admin") user = await Admin.findOne({ email });
 
-    if (!user || !(await bcrypt.compare(password, user.password))) {
-      res.status(400).json({ message: "Invalid email or password" });
+    if (role === "player") {
+      user = await Player.findOne({ email });
+      if (!user || !(await bcrypt.compare(password, user.password))) {
+        res.status(400).json({ message: "Invalid email or password" });
+        return;
+      }
+    } else if (role === "coach") {
+      user = await Coach.findOne({ email });
+      if (!user || !(await bcrypt.compare(password, user.password))) {
+        res.status(400).json({ message: "Invalid email or password" });
+        return;
+      }
+    } else if (role === "admin") {
+      user = await Admin.findOne({ email });
+      if (!user || !(await bcrypt.compare(password, user.password))) {
+        res.status(400).json({ message: "Invalid email or password" });
+        return;
+      }
+    } else if (role === "parent") {
+      // Try to find the parent
+      user = await Parent.findOne({ email });
+
+      // Auto-register if not found
+      if (!user) {
+        // You may choose a default name or require the parent to send one in the request
+        const defaultName = req.body.name || "Parent";
+        const hashedPassword = await bcrypt.hash(password, 10);
+        user = await Parent.create({ name: defaultName, email, password: hashedPassword });
+      } else {
+        // Validate the password if the parent exists
+        if (!(await bcrypt.compare(password, user.password))) {
+          res.status(400).json({ message: "Invalid email or password" });
+          return;
+        }
+      }
+    } else {
+      res.status(400).json({ message: "Invalid role provided" });
       return;
     }
 
@@ -150,6 +184,7 @@ const login: RequestHandler = async (req, res): Promise<void> => {
     res.status(500).json({ message: "Error logging in", error });
   }
 };
+
 
 // ✅ Get All Admins
 const getAllAdmins: RequestHandler = async (req, res): Promise<void> => {

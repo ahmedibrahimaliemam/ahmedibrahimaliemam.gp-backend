@@ -20,6 +20,7 @@ const dotenv_1 = __importDefault(require("dotenv"));
 const player_model_1 = __importDefault(require("../models/player.model"));
 const coach_model_1 = __importDefault(require("../models/coach.model"));
 const admin_model_1 = __importDefault(require("../models/admin.model"));
+const parent_model_1 = __importDefault(require("../models/parent.model"));
 dotenv_1.default.config();
 // ✅ Generate JWT Token
 const generateToken = (id, role) => {
@@ -69,7 +70,7 @@ exports.handleValidationErrors = handleValidationErrors;
 const registerAdmin = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     console.log(`helooooooooo`);
     try {
-        const { _id, name, email, password, secretCode } = req.body;
+        const { name, email, password, secretCode } = req.body;
         if (secretCode !== process.env.ADMIN_SECRET) {
             res.status(403).json({ message: "Invalid secret code" });
             return;
@@ -80,7 +81,7 @@ const registerAdmin = (req, res) => __awaiter(void 0, void 0, void 0, function* 
             return;
         }
         const hashedPassword = yield bcryptjs_1.default.hash(password, 10);
-        const admin = yield admin_model_1.default.create({ _id, name, email, password: hashedPassword });
+        const admin = yield admin_model_1.default.create({ name, email, password: hashedPassword });
         console.log(email, "hahahha");
         res.status(201).json({ message: "Admin registered11", token: generateToken(admin._id, "admin") });
     }
@@ -92,14 +93,14 @@ exports.registerAdmin = registerAdmin;
 // ✅ Register Coach (Only Admin Can Register)
 const registerCoach = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const { _id, name, email, phoneNumber, teamId, password } = req.body;
+        const { name, email, phoneNumber, teamId, password } = req.body;
         const existingCoach = yield coach_model_1.default.findOne({ email });
         if (existingCoach) {
             res.status(400).json({ message: "Email already in use" });
             return;
         }
         const hashedPassword = yield bcryptjs_1.default.hash(password, 10);
-        const coach = yield coach_model_1.default.create({ _id, name, email, phoneNumber, teamId, password: hashedPassword });
+        const coach = yield coach_model_1.default.create({ name, email, phoneNumber, teamId, password: hashedPassword });
         res.status(201).json({ message: "Coach registered", token: generateToken(coach._id, "coach") });
     }
     catch (error) {
@@ -110,14 +111,14 @@ exports.registerCoach = registerCoach;
 // ✅ Register Player (Only Admin Can Register)
 const registerPlayer = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const { _id, name, email, position, coachId, teamId, password } = req.body;
+        const { name, email, position, coachId, teamId, password } = req.body;
         const existingPlayer = yield player_model_1.default.findOne({ email });
         if (existingPlayer) {
             res.status(400).json({ message: "Email already in use" });
             return;
         }
         const hashedPassword = yield bcryptjs_1.default.hash(password, 10);
-        const player = yield player_model_1.default.create({ _id, name, email, position, coachId, teamId, password: hashedPassword });
+        const player = yield player_model_1.default.create({ name, email, position, coachId, teamId, password: hashedPassword });
         res.status(201).json({ message: "Player registered", token: generateToken(player._id, "player") });
     }
     catch (error) {
@@ -126,6 +127,7 @@ const registerPlayer = (req, res) => __awaiter(void 0, void 0, void 0, function*
 });
 exports.registerPlayer = registerPlayer;
 // ✅ Login
+// ✅ Login with Auto-Registration for Parents
 const login = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { email, password, role } = req.body;
@@ -134,14 +136,47 @@ const login = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             return;
         }
         let user;
-        if (role === "player")
+        if (role === "player") {
             user = yield player_model_1.default.findOne({ email });
-        else if (role === "coach")
+            if (!user || !(yield bcryptjs_1.default.compare(password, user.password))) {
+                res.status(400).json({ message: "Invalid email or password" });
+                return;
+            }
+        }
+        else if (role === "coach") {
             user = yield coach_model_1.default.findOne({ email });
-        else if (role === "admin")
+            if (!user || !(yield bcryptjs_1.default.compare(password, user.password))) {
+                res.status(400).json({ message: "Invalid email or password" });
+                return;
+            }
+        }
+        else if (role === "admin") {
             user = yield admin_model_1.default.findOne({ email });
-        if (!user || !(yield bcryptjs_1.default.compare(password, user.password))) {
-            res.status(400).json({ message: "Invalid email or password" });
+            if (!user || !(yield bcryptjs_1.default.compare(password, user.password))) {
+                res.status(400).json({ message: "Invalid email or password" });
+                return;
+            }
+        }
+        else if (role === "parent") {
+            // Try to find the parent
+            user = yield parent_model_1.default.findOne({ email });
+            // Auto-register if not found
+            if (!user) {
+                // You may choose a default name or require the parent to send one in the request
+                const defaultName = req.body.name || "Parent";
+                const hashedPassword = yield bcryptjs_1.default.hash(password, 10);
+                user = yield parent_model_1.default.create({ name: defaultName, email, password: hashedPassword });
+            }
+            else {
+                // Validate the password if the parent exists
+                if (!(yield bcryptjs_1.default.compare(password, user.password))) {
+                    res.status(400).json({ message: "Invalid email or password" });
+                    return;
+                }
+            }
+        }
+        else {
+            res.status(400).json({ message: "Invalid role provided" });
             return;
         }
         res.json({ message: "Login successful", token: generateToken(user._id, role) });

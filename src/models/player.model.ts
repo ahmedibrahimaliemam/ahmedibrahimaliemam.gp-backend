@@ -11,7 +11,7 @@ interface IPlayer extends Document {
 }
 
 const PlayerSchema = new Schema<IPlayer>({
-  _id: { type: String, required: true }, // Phone number as _id
+  //_id: { type: String, required: true }, // Phone number as _id
   name: { type: String, required: true },
   email: { 
     type: String, 
