@@ -11,8 +11,8 @@ import Parent from "../models/parent.model";
 dotenv.config();
 
 // ✅ Generate JWT Token
-const generateToken = (id: string, role: string): string => {
-  return jwt.sign({ id, role }, process.env.JWT_SECRET as string, { expiresIn: "7d" });
+const generateToken = (_id: string, role: string): string => {
+  return jwt.sign({ _id, role  }, process.env.JWT_SECRET as string, { expiresIn: "7d" });
 };
 
 // ✅ Middleware to Verify Admin Token
@@ -89,7 +89,7 @@ const registerAdmin: RequestHandler = async (req, res): Promise<void> => {
 // ✅ Register Coach (Only Admin Can Register)
 const registerCoach: RequestHandler = async (req, res): Promise<void> => {
   try {
-    const {  name, email, phoneNumber, teamId, password } = req.body;
+    const {name, email, phoneNumber, teamId, password } = req.body;
 
     const existingCoach = await Coach.findOne({ email });
     if (existingCoach) {
@@ -98,7 +98,7 @@ const registerCoach: RequestHandler = async (req, res): Promise<void> => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const coach = await Coach.create({  name, email, phoneNumber, teamId, password: hashedPassword });
+    const coach = await Coach.create({_id:phoneNumber,  name, email, phoneNumber, teamId, password: hashedPassword });
 
     res.status(201).json({ message: "Coach registered", token: generateToken(coach._id, "coach") });
   } catch (error) {

@@ -35,10 +35,10 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 const mongoose_1 = __importStar(require("mongoose"));
 const TeamSchema = new mongoose_1.Schema({
-    //_id: { type: String, required: true },
+    _id: { type: String, required: true }, // Ensure _id is a String, not ObjectId
     name: { type: String, required: true },
-    coachId: { type: String, ref: "Coach", required: true }, // ✅ Change ObjectId -> String
-    players: [{ type: String, ref: "Player" }], // ✅ Change ObjectId -> String
-    matchSchedule: [{ type: String, ref: "Match" }], // ✅ Change ObjectId -> String
+    coachId: { type: String, ref: "Coach", required: true }, // Coach ID is also a string
+    players: [{ type: String, ref: "Player" }], // Player IDs as strings
+    matchSchedule: [{ type: String, ref: "Match" }], // Match IDs as strings
 });
 exports.default = mongoose_1.default.model("Team", TeamSchema);

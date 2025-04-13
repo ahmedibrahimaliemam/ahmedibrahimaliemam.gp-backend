@@ -23,8 +23,8 @@ const admin_model_1 = __importDefault(require("../models/admin.model"));
 const parent_model_1 = __importDefault(require("../models/parent.model"));
 dotenv_1.default.config();
 // ✅ Generate JWT Token
-const generateToken = (id, role) => {
-    return jsonwebtoken_1.default.sign({ id, role }, process.env.JWT_SECRET, { expiresIn: "7d" });
+const generateToken = (_id, role) => {
+    return jsonwebtoken_1.default.sign({ _id, role }, process.env.JWT_SECRET, { expiresIn: "7d" });
 };
 // ✅ Middleware to Verify Admin Token
 const verifyAdmin = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
@@ -100,7 +100,7 @@ const registerCoach = (req, res) => __awaiter(void 0, void 0, void 0, function* 
             return;
         }
         const hashedPassword = yield bcryptjs_1.default.hash(password, 10);
-        const coach = yield coach_model_1.default.create({ name, email, phoneNumber, teamId, password: hashedPassword });
+        const coach = yield coach_model_1.default.create({ _id: phoneNumber, name, email, phoneNumber, teamId, password: hashedPassword });
         res.status(201).json({ message: "Coach registered", token: generateToken(coach._id, "coach") });
     }
     catch (error) {

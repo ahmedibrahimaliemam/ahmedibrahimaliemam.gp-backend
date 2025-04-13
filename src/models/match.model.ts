@@ -7,6 +7,7 @@ interface IMatch extends Document {
   date: Date;
   team1Score: number;
   team2Score: number;
+  status:string ; //pending or finished
 }
 
 const MatchSchema = new Schema<IMatch>({
@@ -16,6 +17,7 @@ const MatchSchema = new Schema<IMatch>({
   date: { type: Date, required: true },
   team1Score: { type: Number, default: 0 },
   team2Score: { type: Number, default: 0 },
+  status: { type: String, default: "pending" },
 });
 
 export default mongoose.model<IMatch>("Match", MatchSchema);

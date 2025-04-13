@@ -41,5 +41,6 @@ const MatchSchema = new mongoose_1.Schema({
     date: { type: Date, required: true },
     team1Score: { type: Number, default: 0 },
     team2Score: { type: Number, default: 0 },
+    status: { type: String, default: "pending" },
 });
 exports.default = mongoose_1.default.model("Match", MatchSchema);
