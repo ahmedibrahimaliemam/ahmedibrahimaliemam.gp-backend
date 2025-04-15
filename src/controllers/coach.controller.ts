@@ -65,8 +65,8 @@ export const getMatchesByCoach: RequestHandler = async (req, res): Promise<void>
     try {
       // req.user should be populated from the auth middleware (e.g., via JWT decode)
       const authReq = req as Request & { user?: any };
-      const coachId = authReq.user?.id;
-      console.log("id ",authReq.user) ;
+      const coachId = authReq.user?._id;
+      console.log("id hhhhh",authReq.user) ;
       if (!coachId) {
         res.status(403).json({ message: "Not authorized" });
         return;
@@ -123,5 +123,31 @@ export const deleteMatch: RequestHandler = async (req, res) => {
     } catch (error) {
       console.error(error);
       res.status(500).json({ message: "Error deleting match", error });
+    }
+  };
+
+  export const getAllCoachesWithTeamsAndPlayers: RequestHandler = async (req, res) => {
+    try {
+      // Get all coaches
+      const coaches = await Coach.find({}, "_id name");
+  
+      // Map over coaches to fetch their teams and players
+      const result = await Promise.all(
+        coaches.map(async (coach) => {
+          const teams = await Team.find({ coachId: coach._id })
+            .populate("players", "short_name").exec();
+            
+  
+          return {
+            coachId: coach._id,
+            coachName: coach.name,
+            teams,
+          };
+        })
+      );
+  
+      res.status(200).json({ coaches: result });
+    } catch (error) {
+      res.status(500).json({ message: "Error fetching coaches", error });
     }
   };

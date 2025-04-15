@@ -12,7 +12,7 @@ dotenv.config();
 
 // ✅ Generate JWT Token
 const generateToken = (_id: string, role: string): string => {
-  return jwt.sign({ _id, role  }, process.env.JWT_SECRET as string, { expiresIn: "7d" });
+  return jwt.sign({ _id, role }, process.env.JWT_SECRET as string, { expiresIn: "7d" });
 };
 
 // ✅ Middleware to Verify Admin Token
@@ -25,15 +25,15 @@ const verifyAdmin: RequestHandler = async (req: any, res: Response, next: NextFu
       return;
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as { id: string; role: string };
+    const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as { _id: string; role: string };
 
     if (decoded.role !== "admin") {
       res.status(403).json({ message: "Forbidden: Only admins can perform this action" });
       return;
     }
 
-    req.user = decoded; // Attach user info to request
-    next(); // Move to next middleware
+    req.user = decoded;
+    next();
   } catch (error) {
     res.status(401).json({ message: "Unauthorized: Invalid token" });
   }
@@ -52,15 +52,13 @@ const handleValidationErrors: RequestHandler = (req, res, next): void => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     res.status(400).json({ errors: errors.array() });
-    return; // Ensures function exits correctly
+    return;
   }
-  next(); // Continue if no validation errors
+  next();
 };
-
 
 // ✅ Register Admin
 const registerAdmin: RequestHandler = async (req, res): Promise<void> => {
-  console.log(`helooooooooo`)
   try {
     const { name, email, password, secretCode } = req.body;
 
@@ -76,20 +74,18 @@ const registerAdmin: RequestHandler = async (req, res): Promise<void> => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const admin = await Admin.create({  name, email, password: hashedPassword });
-    console.log(email,"hahahha");
-    
+    const admin = await Admin.create({_id:name, name, email, password: hashedPassword });
 
-    res.status(201).json({ message: "Admin registered11", token: generateToken(admin._id, "admin") });
+    res.status(201).json({ message: "Admin registered", token: generateToken(admin._id, "admin") });
   } catch (error) {
     res.status(500).json({ message: "Error registering admin", error });
   }
 };
 
-// ✅ Register Coach (Only Admin Can Register)
+// ✅ Register Coach
 const registerCoach: RequestHandler = async (req, res): Promise<void> => {
   try {
-    const {name, email, phoneNumber, teamId, password } = req.body;
+    const { name, email, phoneNumber, teamId, password } = req.body;
 
     const existingCoach = await Coach.findOne({ email });
     if (existingCoach) {
@@ -98,7 +94,7 @@ const registerCoach: RequestHandler = async (req, res): Promise<void> => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const coach = await Coach.create({_id:phoneNumber,  name, email, phoneNumber, teamId, password: hashedPassword });
+    const coach = await Coach.create({ _id: name, name, email, phoneNumber, teamId, password: hashedPassword });
 
     res.status(201).json({ message: "Coach registered", token: generateToken(coach._id, "coach") });
   } catch (error) {
@@ -106,28 +102,34 @@ const registerCoach: RequestHandler = async (req, res): Promise<void> => {
   }
 };
 
-// ✅ Register Player (Only Admin Can Register)
-const registerPlayer: RequestHandler = async (req, res): Promise<void> => {
+// ✅ Register Parent (Admin only)
+const registerParent: RequestHandler = async (req, res): Promise<void> => {
   try {
-    const { name, email, position, coachId, teamId, password } = req.body;
+    const { phoneNumber, name, email, password, players } = req.body;
 
-    const existingPlayer = await Player.findOne({ email });
-    if (existingPlayer) {
+    const existingParent = await Parent.findOne({ email });
+    if (existingParent) {
       res.status(400).json({ message: "Email already in use" });
       return;
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const player = await Player.create({  name, email, position, coachId, teamId, password: hashedPassword });
+    const parent = await Parent.create({
+      _id:name,
+      phoneNumber,
+      name,
+      email,
+      password: hashedPassword,
+      players,
+    });
 
-    res.status(201).json({ message: "Player registered", token: generateToken(player._id, "player") });
+    res.status(201).json({ message: "Parent registered successfully", parent });
   } catch (error) {
-    res.status(500).json({ message: "Error registering player", error });
+    res.status(500).json({ message: "Error registering parent", error });
   }
 };
 
 // ✅ Login
-// ✅ Login with Auto-Registration for Parents
 const login: RequestHandler = async (req, res): Promise<void> => {
   try {
     const { email, password, role } = req.body;
@@ -139,43 +141,19 @@ const login: RequestHandler = async (req, res): Promise<void> => {
 
     let user;
 
-    if (role === "player") {
-      user = await Player.findOne({ email });
-      if (!user || !(await bcrypt.compare(password, user.password))) {
-        res.status(400).json({ message: "Invalid email or password" });
-        return;
-      }
-    } else if (role === "coach") {
+    if (role === "coach") {
       user = await Coach.findOne({ email });
-      if (!user || !(await bcrypt.compare(password, user.password))) {
-        res.status(400).json({ message: "Invalid email or password" });
-        return;
-      }
     } else if (role === "admin") {
       user = await Admin.findOne({ email });
-      if (!user || !(await bcrypt.compare(password, user.password))) {
-        res.status(400).json({ message: "Invalid email or password" });
-        return;
-      }
     } else if (role === "parent") {
-      // Try to find the parent
       user = await Parent.findOne({ email });
-
-      // Auto-register if not found
-      if (!user) {
-        // You may choose a default name or require the parent to send one in the request
-        const defaultName = req.body.name || "Parent";
-        const hashedPassword = await bcrypt.hash(password, 10);
-        user = await Parent.create({ name: defaultName, email, password: hashedPassword });
-      } else {
-        // Validate the password if the parent exists
-        if (!(await bcrypt.compare(password, user.password))) {
-          res.status(400).json({ message: "Invalid email or password" });
-          return;
-        }
-      }
     } else {
       res.status(400).json({ message: "Invalid role provided" });
+      return;
+    }
+
+    if (!user || !(await bcrypt.compare(password, user.password))) {
+      res.status(400).json({ message: "Invalid email or password" });
       return;
     }
 
@@ -185,11 +163,10 @@ const login: RequestHandler = async (req, res): Promise<void> => {
   }
 };
 
-
 // ✅ Get All Admins
 const getAllAdmins: RequestHandler = async (req, res): Promise<void> => {
   try {
-    const admins = await Admin.find({}, "_id name"); // Fetch only necessary fields
+    const admins = await Admin.find({}, "_id name");
     res.status(200).json(admins);
   } catch (error) {
     res.status(500).json({ message: "Error retrieving admins", error });
@@ -199,7 +176,7 @@ const getAllAdmins: RequestHandler = async (req, res): Promise<void> => {
 export {
   registerAdmin,
   registerCoach,
-  registerPlayer,
+  registerParent,
   login,
   getAllAdmins,
   validateRegistration,

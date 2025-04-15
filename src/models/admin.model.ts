@@ -8,7 +8,7 @@ interface IAdmin extends Document {
 }
 
 const AdminSchema = new Schema<IAdmin>({
-  //_id: { type: String, required: true, unique: true }, // Ensuring phone number is unique
+  _id: { type: String, required: true, unique: true }, // Ensuring phone number is unique
   email: { 
     type: String, 
     required: true, 

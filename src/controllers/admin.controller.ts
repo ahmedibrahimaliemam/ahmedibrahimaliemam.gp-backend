@@ -7,10 +7,10 @@ import mongoose from "mongoose";
 
 export const addTeam = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { _id, name, coachId } = req.body; // _id is the team id (string)
+    const { name, coachId } = req.body; // _id is the team id (string)
     
     // Create a new Team document; players and matchSchedule start as empty arrays.
-    const newTeam = new Team({ _id, name, coachId, players: [], matchSchedule: [] });
+    const newTeam = new Team({ _id:name, name, coachId, players: [], matchSchedule: [] });
     await newTeam.save();
 
     res.status(201).json({ message: "Team added successfully", team: newTeam });
@@ -24,13 +24,18 @@ export const addTeam = async (req: Request, res: Response): Promise<void> => {
  * Admin can view all teams and their assigned coaches.
  */
 export const getAllTeamsWithCoaches: RequestHandler = async (req, res) => {
-    try {
-      const teams = await Team.find().populate("coachId", "name _id");
-      res.status(200).json({ teams });
-    } catch (error) {
-      res.status(500).json({ message: "Error fetching teams", error });
-    }
-  };
+  try {
+
+    const teams = await Team.find()
+      .populate("coachId", "name _id")                 // Coach details
+      .populate("players", "_id short_name club_position overall"); // Player details you want
+
+    res.status(200).json({ teams });
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching teams", error });
+  }
+};
+
 
 
 
@@ -78,3 +83,46 @@ export const getTeamMatchResults:RequestHandler = async (req,res) => {
       res.status(500).json({ message: "Error fetching match results", error });
     }
   };
+
+  /**
+ * GET /api/admin/teams/:teamId
+ * Admin can get details of a specific team
+ */
+export const getTeamById: RequestHandler = async (req, res) => {
+  try {
+    const { teamId } = req.params;
+
+    const team = await Team.findById(teamId)
+      .populate("coachId", "name _id")
+      .populate("players", "_id short_name club_position overall");
+
+    if (!team) {
+      res.status(404).json({ message: "Team not found" });
+      return;
+    }
+
+    res.status(200).json({ team });
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching team", error });
+  }
+};
+/**
+ * DELETE /api/admin/teams/:teamId
+ * Admin can delete a specific team
+ */
+export const deleteTeam: RequestHandler = async (req, res) => {
+  try {
+    const { teamId } = req.params;
+
+    const deletedTeam = await Team.findByIdAndDelete(teamId);
+
+    if (!deletedTeam) {
+      res.status(404).json({ message: "Team not found" });
+      return;
+    }
+
+    res.status(200).json({ message: "Team deleted successfully", deletedTeam });
+  } catch (error) {
+    res.status(500).json({ message: "Error deleting team", error });
+  }
+};
