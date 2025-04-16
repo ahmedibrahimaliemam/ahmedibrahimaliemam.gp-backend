@@ -26,7 +26,7 @@ export const addTeam = async (req: Request, res: Response): Promise<void> => {
 export const getAllTeamsWithCoaches: RequestHandler = async (req, res) => {
   try {
     const teams = await Team.find()
-      .populate("coachId", "name _id")
+      .populate("coachId")
       .populate("players");
 
     const teamsWithFilteredMatches = await Promise.all(

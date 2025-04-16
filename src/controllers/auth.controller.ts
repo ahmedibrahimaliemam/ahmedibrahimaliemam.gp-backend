@@ -7,7 +7,7 @@ import Player from "../models/player.model";
 import Coach from "../models/coach.model";
 import Admin from "../models/admin.model";
 import Parent from "../models/parent.model";
-
+import Team from "../models/team.model";
 dotenv.config();
 
 // ✅ Generate JWT Token
@@ -83,39 +83,66 @@ const registerAdmin: RequestHandler = async (req, res): Promise<void> => {
 };
 
 // ✅ Register Coach
-const registerCoach: RequestHandler = async (req, res): Promise<void> => {
+export const registerCoach: RequestHandler = async (req, res): Promise<void> => {
   try {
     const { name, email, phoneNumber, teamId, password } = req.body;
 
+    // Check if coach with the given email already exists.
     const existingCoach = await Coach.findOne({ email });
     if (existingCoach) {
       res.status(400).json({ message: "Email already in use" });
       return;
     }
 
+    // Check if the provided teamId exists in the Team collection.
+    const team = await Team.findById(teamId);
+    if (!team) {
+      res.status(400).json({ message: "Team does not exist" });
+      return;
+      
+    }
+
     const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Create the coach; here _id is set to name (adjust as required for your application)
     const coach = await Coach.create({ _id: name, name, email, phoneNumber, teamId, password: hashedPassword });
 
     res.status(201).json({ message: "Coach registered", token: generateToken(coach._id, "coach") });
+    
   } catch (error) {
     res.status(500).json({ message: "Error registering coach", error });
   }
 };
 
 // ✅ Register Parent (Admin only)
-const registerParent: RequestHandler = async (req, res): Promise<void> => {
+ const registerParent: RequestHandler = async (req, res): Promise<void> => {
   try {
     const { phoneNumber, name, email, password, players } = req.body;
 
+    // Check if parent's email is already in use
     const existingParent = await Parent.findOne({ email });
     if (existingParent) {
       res.status(400).json({ message: "Email already in use" });
       return;
     }
 
+    // Verify that each player in the players array exists in the database
+    if (players && Array.isArray(players) && players.length > 0) {
+      for (const playerId of players) {
+        const playerExists = await Player.findById(playerId);
+        if (!playerExists) {
+          res.status(400).json({ message: `Player with id ${playerId} does not exist` });
+          return;
+        }
+      }
+    }
+
+    // Hash the parent's password
     const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Create the parent record, using name as _id (adjust as needed)
     const parent = await Parent.create({
-      _id:name,
+      _id: name,
       phoneNumber,
       name,
       email,
@@ -128,7 +155,6 @@ const registerParent: RequestHandler = async (req, res): Promise<void> => {
     res.status(500).json({ message: "Error registering parent", error });
   }
 };
-
 // ✅ Login
 const login: RequestHandler = async (req, res): Promise<void> => {
   try {
@@ -175,7 +201,6 @@ const getAllAdmins: RequestHandler = async (req, res): Promise<void> => {
 
 export {
   registerAdmin,
-  registerCoach,
   registerParent,
   login,
   getAllAdmins,

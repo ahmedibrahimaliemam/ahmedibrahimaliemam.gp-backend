@@ -10,7 +10,7 @@ export interface IPlayer extends Document {
   club_name:string;              // Phone number as ID
   short_name: string;
   //position: string;
-  coachId: string;
+  coachName: string;
   Team_name: string;
   //password: string;
   preferred_foot?: string;   // e.g., "left" or "right"
@@ -35,7 +35,7 @@ const PlayerSchema = new Schema<IPlayer>(
     _id: { type: String, required: true },  // Using phone number as the _id
     short_name: { type: String, required: true },
     //position: { type: String, required: true },
-    coachId: { type: String, ref: "Coach", required: true },
+    coachName: { type: String, ref: "Coach", required: true },
     Team_name: { type: String, ref: "Team", required: true },
     //password: { type: String, required: true },
     preferred_foot: { type: String },

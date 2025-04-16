@@ -128,20 +128,21 @@ export const deleteMatch: RequestHandler = async (req, res) => {
 
   export const getAllCoachesWithTeamsAndPlayers: RequestHandler = async (req, res) => {
     try {
-      // Get all coaches
+      // Get all coaches (selecting _id and name only for brevity)
       const coaches = await Coach.find({}, "_id name");
-  
-      // Map over coaches to fetch their teams and players
+      
+      // For each coach, fetch the teams that belong to them and populate players
       const result = await Promise.all(
         coaches.map(async (coach) => {
+          // Query teams where coachId matches coach._id
           const teams = await Team.find({ coachId: coach._id })
-            .populate("players", "short_name").exec();
-            
+            .populate("players") // Populate all fields of players; you can choose to specify specific fields if needed
+            .exec();
   
           return {
             coachId: coach._id,
             coachName: coach.name,
-            teams,
+            teams, // Each team will include its populated players array
           };
         })
       );
