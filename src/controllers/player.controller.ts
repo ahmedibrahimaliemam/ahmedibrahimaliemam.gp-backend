@@ -18,7 +18,7 @@ export const addPlayer = async (req: Request, res: Response): Promise<void> => {
     try {
       const {
         short_name,
-        coachId,
+        coachName,
         Team_name,
         preferred_foot,
         club_position,
@@ -52,7 +52,7 @@ export const addPlayer = async (req: Request, res: Response): Promise<void> => {
       const newPlayer = new Player({
         _id:short_name,
         short_name,
-        coachId,
+        coachName,
         Team_name,
         preferred_foot,
         club_position,

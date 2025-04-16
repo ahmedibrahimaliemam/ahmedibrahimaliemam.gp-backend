@@ -7,10 +7,10 @@ import mongoose from "mongoose";
 
 export const addTeam = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { name, coachId } = req.body; // _id is the team id (string)
+    const { name, logo } = req.body; // _id is the team id (string)
     
     // Create a new Team document; players and matchSchedule start as empty arrays.
-    const newTeam = new Team({ _id:name, name, coachId, players: [], matchSchedule: [] });
+    const newTeam = new Team({ _id:name, name, logo, players: [], matchSchedule: [] });
     await newTeam.save();
 
     res.status(201).json({ message: "Team added successfully", team: newTeam });
