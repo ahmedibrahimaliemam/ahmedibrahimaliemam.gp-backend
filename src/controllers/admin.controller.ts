@@ -25,12 +25,23 @@ export const addTeam = async (req: Request, res: Response): Promise<void> => {
  */
 export const getAllTeamsWithCoaches: RequestHandler = async (req, res) => {
   try {
-
     const teams = await Team.find()
-      .populate("coachId", "name _id")                 // Coach details
-      .populate("players", "_id short_name club_position overall"); // Player details you want
+      .populate("coachId", "name _id")
+      .populate("players");
 
-    res.status(200).json({ teams });
+    const teamsWithFilteredMatches = await Promise.all(
+      teams.map(async (team) => {
+        // Only fetch matches where team1 == team._id (team name in your schema)
+        const filteredMatches = await Match.find({ team1: team._id })
+
+        return {
+          ...team.toObject(),
+          matchSchedule: filteredMatches, // Replace matchSchedule with filtered ones
+        };
+      })
+    );
+
+    res.status(200).json({ teams: teamsWithFilteredMatches });
   } catch (error) {
     res.status(500).json({ message: "Error fetching teams", error });
   }
