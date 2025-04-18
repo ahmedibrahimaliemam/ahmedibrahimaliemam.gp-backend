@@ -33,14 +33,36 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
+// src/models/match.model.ts
 const mongoose_1 = __importStar(require("mongoose"));
 const MatchSchema = new mongoose_1.Schema({
-    _id: { type: String, required: true }, // Match ID
-    team1: { type: String, ref: "Team", required: true }, // ✅ Use String instead of ObjectId
-    team2: { type: String, ref: "Team", required: true }, // ✅ Use String instead of ObjectId
+    _id: { type: String, required: true },
+    team1: { type: String, ref: "Team", required: true },
+    team2: { type: String, ref: "Team", required: true },
     date: { type: Date, required: true },
-    team1Score: { type: Number, default: 0 },
-    team2Score: { type: Number, default: 0 },
-    status: { type: String, default: "pending" },
+    team1Score: { type: Number, default: null },
+    team2Score: { type: Number, default: null },
+}, {
+    timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
+});
+// Virtual `status` computed at runtime
+MatchSchema.virtual("status").get(function () {
+    const now = Date.now();
+    const matchTime = this.date.getTime();
+    const ninetyMins = 90 * 60 * 1000;
+    if (now < matchTime) {
+        // match in future → return ISO date string
+        return this.date.toISOString();
+    }
+    else if (now - matchTime <= ninetyMins) {
+        // within 90 minutes of start → live
+        return "live";
+    }
+    else {
+        // more than 90 minutes past → finished
+        return "finished";
+    }
 });
 exports.default = mongoose_1.default.model("Match", MatchSchema);

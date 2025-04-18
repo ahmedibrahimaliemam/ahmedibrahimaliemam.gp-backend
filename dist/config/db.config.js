@@ -12,9 +12,24 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.connectDB = exports.syncPlayerIndexes = void 0;
 const mongoose_1 = __importDefault(require("mongoose"));
 const dotenv_1 = __importDefault(require("dotenv"));
+const player_model_1 = __importDefault(require("../models/player.model"));
 dotenv_1.default.config();
+const syncPlayerIndexes = () => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        // await coachModel.syncIndexes();
+        // await adminModel.syncIndexes() ;
+        // await parentModel.syncIndexes();
+        yield player_model_1.default.syncIndexes(); // This will update indexes to match your current schema.
+        console.log("Player indexes synchronized.");
+    }
+    catch (error) {
+        console.error("Error synchronizing indexes:", error);
+    }
+});
+exports.syncPlayerIndexes = syncPlayerIndexes;
 const connectDB = () => __awaiter(void 0, void 0, void 0, function* () {
     try {
         yield mongoose_1.default.connect(process.env.MONGO_URI);
@@ -25,4 +40,4 @@ const connectDB = () => __awaiter(void 0, void 0, void 0, function* () {
         process.exit(1);
     }
 });
-exports.default = connectDB;
+exports.connectDB = connectDB;

@@ -4,6 +4,8 @@ import { RequestHandler } from "express";
 import Coach from "../models/coach.model";
 import Match from "../models/match.model";
 import mongoose from "mongoose";
+import coachModel from "../models/coach.model";
+import teamModel from "../models/team.model";
 
 export const addTeam = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -31,12 +33,14 @@ export const getAllTeamsWithCoaches: RequestHandler = async (req, res) => {
 
     const teamsWithFilteredMatches = await Promise.all(
       teams.map(async (team) => {
-        // Only fetch matches where team1 == team._id (team name in your schema)
-        const filteredMatches = await Match.find({ team1: team._id })
+        // Fetch matches where team is either team1 or team2
+        const filteredMatches = await Match.find({
+          $or: [{ team1: team._id }, { team2: team._id }],
+        });
 
         return {
           ...team.toObject(),
-          matchSchedule: filteredMatches, // Replace matchSchedule with filtered ones
+          matchSchedule: filteredMatches, 
         };
       })
     );
@@ -46,7 +50,6 @@ export const getAllTeamsWithCoaches: RequestHandler = async (req, res) => {
     res.status(500).json({ message: "Error fetching teams", error });
   }
 };
-
 
 
 
@@ -99,24 +102,41 @@ export const getTeamMatchResults:RequestHandler = async (req,res) => {
  * GET /api/admin/teams/:teamId
  * Admin can get details of a specific team
  */
-export const getTeamById: RequestHandler = async (req, res) => {
-  try {
-    const { teamId } = req.params;
-
-    const team = await Team.findById(teamId)
-      .populate("coachId", "name _id")
-      .populate("players", "_id short_name club_position overall");
-
-    if (!team) {
-      res.status(404).json({ message: "Team not found" });
-      return;
+  export const getTeamByCoachId: RequestHandler = async (req, res) => {
+    try {
+      const { coachId } = req.params; // Changed from teamId to coachId
+  
+      const coach = await coachModel.findById(coachId);
+      if (!coach) {
+         res.status(404).json({ message: "Coach not found" });
+         return;
+      }
+  
+      const team = await teamModel.findById(coach.teamId)
+        .populate("players")
+        .populate("coachId");
+  
+      if (!team) {
+        res.status(404).json({ message: "Team not found for this coach" });
+        return;
+      }
+  
+      // Get matches where team is either team1 or team2
+      const matches = await Match.find({
+        $or: [{ team1: team._id }, { team2: team._id }]
+      });
+  
+      const teamWithMatches = {
+        ...team.toObject(),
+        matchSchedule: matches // Replace with actual matches from query
+      };
+  
+      res.status(200).json({ team: teamWithMatches });
+    } catch (error) {
+      res.status(500).json({ message: "Error fetching team by coachId", error });
     }
-
-    res.status(200).json({ team });
-  } catch (error) {
-    res.status(500).json({ message: "Error fetching team", error });
-  }
-};
+  };
+  
 /**
  * DELETE /api/admin/teams/:teamId
  * Admin can delete a specific team

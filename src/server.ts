@@ -7,6 +7,9 @@ import adminRoutes from "./routes/admin.routes";
 import coachRoutes from "./routes/coach.routes";
 import playerRoutes from "./routes/player.routes";
 import importRoutes from "./routes/import.routes";
+import attendanceRoutes from "./routes/attendance.routes";
+import matchRoutes from "./routes/match.routes";
+import parentRoutes from "./routes/parent.routes";
 import fs from 'fs';
 import path from 'path';
 
@@ -22,6 +25,9 @@ app.use("/api/auth", authRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/coach", coachRoutes);
 app.use("/api/players", playerRoutes);
+app.use("/api/match",matchRoutes);
+//app.use("/api",attendanceRoutes);
+app.use("/api/parents", parentRoutes);
 const uploadPath = path.join(__dirname, '../uploads');
 if (!fs.existsSync(uploadPath)) {
   fs.mkdirSync(uploadPath, { recursive: true });

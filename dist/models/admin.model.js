@@ -35,7 +35,7 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 const mongoose_1 = __importStar(require("mongoose"));
 const AdminSchema = new mongoose_1.Schema({
-    //_id: { type: String, required: true, unique: true }, // Ensuring phone number is unique
+    _id: { type: String, required: true, unique: true }, // Ensuring phone number is unique
     email: {
         type: String,
         required: true,

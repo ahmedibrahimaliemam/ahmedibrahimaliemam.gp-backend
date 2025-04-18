@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deleteMatch = exports.getMatchesByCoach = exports.updateMatchResult = exports.addMatch = void 0;
+exports.getAllCoachesWithTeamsAndPlayers = exports.deleteMatch = exports.getMatchesByCoach = exports.updateMatchResult = exports.addMatch = void 0;
 const match_model_1 = __importDefault(require("../models/match.model"));
 const coach_model_1 = __importDefault(require("../models/coach.model"));
 const team_model_1 = __importDefault(require("../models/team.model"));
@@ -75,8 +75,8 @@ const getMatchesByCoach = (req, res) => __awaiter(void 0, void 0, void 0, functi
     try {
         // req.user should be populated from the auth middleware (e.g., via JWT decode)
         const authReq = req;
-        const coachId = (_a = authReq.user) === null || _a === void 0 ? void 0 : _a.id;
-        console.log("id ", authReq.user);
+        const coachId = (_a = authReq.user) === null || _a === void 0 ? void 0 : _a._id;
+        console.log("id hhhhh", authReq.user);
         if (!coachId) {
             res.status(403).json({ message: "Not authorized" });
             return;
@@ -131,3 +131,37 @@ const deleteMatch = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
     }
 });
 exports.deleteMatch = deleteMatch;
+// src/controllers/coach.controller.ts
+const getAllCoachesWithTeamsAndPlayers = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        // 1) Load coaches and populate their single team
+        const coaches = yield coach_model_1.default.find({}, "_id name email phoneNumber teamId")
+            .populate({
+            path: "teamId",
+            select: "_id name players",
+            populate: {
+                path: "players",
+                select: "_id short_name Team_name",
+            },
+        })
+            .exec();
+        // 2) Shape the response
+        const result = coaches.map((coach) => ({
+            coachId: coach._id,
+            coachName: coach.name,
+            email: coach.email,
+            phoneNumber: coach.phoneNumber,
+            team: coach.teamId
+        }));
+        res.status(200).json({ coaches: result });
+        return;
+    }
+    catch (error) {
+        console.error("Error fetching coaches:", error);
+        res
+            .status(500)
+            .json({ message: "Error fetching coaches", error });
+        return;
+    }
+});
+exports.getAllCoachesWithTeamsAndPlayers = getAllCoachesWithTeamsAndPlayers;

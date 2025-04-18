@@ -37,7 +37,8 @@ const mongoose_1 = __importStar(require("mongoose"));
 const TeamSchema = new mongoose_1.Schema({
     _id: { type: String, required: true }, // Ensure _id is a String, not ObjectId
     name: { type: String, required: true },
-    coachId: { type: String, ref: "Coach", required: true }, // Coach ID is also a string
+    logo: { type: String, required: true },
+    coachId: { type: String, ref: "Coach" }, // Coach ID is also a string
     players: [{ type: String, ref: "Player" }], // Player IDs as strings
     matchSchedule: [{ type: String, ref: "Match" }], // Match IDs as strings
 });

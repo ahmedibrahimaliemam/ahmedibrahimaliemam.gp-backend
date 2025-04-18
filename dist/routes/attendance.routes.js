@@ -3,12 +3,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-// src/routes/match.routes.ts
 const express_1 = __importDefault(require("express"));
-const match_controller_1 = require("../controllers/match.controller");
 const auth_middleware_1 = require("../middlewars/auth.middleware");
+const attendance_controller_1 = require("../controllers/attendance.controller");
 const router = express_1.default.Router();
-router.post("/", auth_middleware_1.protect, match_controller_1.addMatch); // create
-router.patch("/:id", auth_middleware_1.protect, match_controller_1.updateMatch); // partial update
-router.delete("/:id", auth_middleware_1.protect, match_controller_1.deleteMatch);
+// src/routes/attendance.routes.ts
+router.post("/face", auth_middleware_1.protect, attendance_controller_1.takeAttendance);
 exports.default = router;

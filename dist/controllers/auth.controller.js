@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.verifyAdmin = exports.handleValidationErrors = exports.validateRegistration = exports.getAllAdmins = exports.login = exports.registerPlayer = exports.registerCoach = exports.registerAdmin = void 0;
+exports.verifyAdmin = exports.handleValidationErrors = exports.validateRegistration = exports.getAllAdmins = exports.login = exports.registerParent = exports.registerAdmin = exports.registerCoach = void 0;
 const express_validator_1 = require("express-validator");
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
@@ -21,6 +21,7 @@ const player_model_1 = __importDefault(require("../models/player.model"));
 const coach_model_1 = __importDefault(require("../models/coach.model"));
 const admin_model_1 = __importDefault(require("../models/admin.model"));
 const parent_model_1 = __importDefault(require("../models/parent.model"));
+const team_model_1 = __importDefault(require("../models/team.model"));
 dotenv_1.default.config();
 // ✅ Generate JWT Token
 const generateToken = (_id, role) => {
@@ -40,8 +41,8 @@ const verifyAdmin = (req, res, next) => __awaiter(void 0, void 0, void 0, functi
             res.status(403).json({ message: "Forbidden: Only admins can perform this action" });
             return;
         }
-        req.user = decoded; // Attach user info to request
-        next(); // Move to next middleware
+        req.user = decoded;
+        next();
     }
     catch (error) {
         res.status(401).json({ message: "Unauthorized: Invalid token" });
@@ -61,14 +62,13 @@ const handleValidationErrors = (req, res, next) => {
     const errors = (0, express_validator_1.validationResult)(req);
     if (!errors.isEmpty()) {
         res.status(400).json({ errors: errors.array() });
-        return; // Ensures function exits correctly
+        return;
     }
-    next(); // Continue if no validation errors
+    next();
 };
 exports.handleValidationErrors = handleValidationErrors;
 // ✅ Register Admin
 const registerAdmin = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    console.log(`helooooooooo`);
     try {
         const { name, email, password, secretCode } = req.body;
         if (secretCode !== process.env.ADMIN_SECRET) {
@@ -81,26 +81,33 @@ const registerAdmin = (req, res) => __awaiter(void 0, void 0, void 0, function* 
             return;
         }
         const hashedPassword = yield bcryptjs_1.default.hash(password, 10);
-        const admin = yield admin_model_1.default.create({ name, email, password: hashedPassword });
-        console.log(email, "hahahha");
-        res.status(201).json({ message: "Admin registered11", token: generateToken(admin._id, "admin") });
+        const admin = yield admin_model_1.default.create({ _id: name, name, email, password: hashedPassword });
+        res.status(201).json({ message: "Admin registered", token: generateToken(admin._id, "admin") });
     }
     catch (error) {
         res.status(500).json({ message: "Error registering admin", error });
     }
 });
 exports.registerAdmin = registerAdmin;
-// ✅ Register Coach (Only Admin Can Register)
+// ✅ Register Coach
 const registerCoach = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { name, email, phoneNumber, teamId, password } = req.body;
+        // Check if coach with the given email already exists.
         const existingCoach = yield coach_model_1.default.findOne({ email });
         if (existingCoach) {
             res.status(400).json({ message: "Email already in use" });
             return;
         }
+        // Check if the provided teamId exists in the Team collection.
+        const team = yield team_model_1.default.findById(teamId);
+        if (!team) {
+            res.status(400).json({ message: "Team does not exist" });
+            return;
+        }
         const hashedPassword = yield bcryptjs_1.default.hash(password, 10);
-        const coach = yield coach_model_1.default.create({ _id: phoneNumber, name, email, phoneNumber, teamId, password: hashedPassword });
+        // Create the coach; here _id is set to name (adjust as required for your application)
+        const coach = yield coach_model_1.default.create({ _id: name, name, email, phoneNumber, teamId, password: hashedPassword });
         res.status(201).json({ message: "Coach registered", token: generateToken(coach._id, "coach") });
     }
     catch (error) {
@@ -108,26 +115,45 @@ const registerCoach = (req, res) => __awaiter(void 0, void 0, void 0, function* 
     }
 });
 exports.registerCoach = registerCoach;
-// ✅ Register Player (Only Admin Can Register)
-const registerPlayer = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+// ✅ Register Parent (Admin only)
+const registerParent = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const { name, email, position, coachId, teamId, password } = req.body;
-        const existingPlayer = yield player_model_1.default.findOne({ email });
-        if (existingPlayer) {
+        const { phoneNumber, name, email, password, players } = req.body;
+        // Check if parent's email is already in use
+        const existingParent = yield parent_model_1.default.findOne({ email });
+        if (existingParent) {
             res.status(400).json({ message: "Email already in use" });
             return;
         }
+        // Verify that each player in the players array exists in the database
+        if (players && Array.isArray(players) && players.length > 0) {
+            for (const playerId of players) {
+                const playerExists = yield player_model_1.default.findById(playerId);
+                if (!playerExists) {
+                    res.status(400).json({ message: `Player with id ${playerId} does not exist` });
+                    return;
+                }
+            }
+        }
+        // Hash the parent's password
         const hashedPassword = yield bcryptjs_1.default.hash(password, 10);
-        const player = yield player_model_1.default.create({ name, email, position, coachId, teamId, password: hashedPassword });
-        res.status(201).json({ message: "Player registered", token: generateToken(player._id, "player") });
+        // Create the parent record, using name as _id (adjust as needed)
+        const parent = yield parent_model_1.default.create({
+            _id: name,
+            phoneNumber,
+            name,
+            email,
+            password: hashedPassword,
+            players,
+        });
+        res.status(201).json({ message: "Parent registered successfully", parent });
     }
     catch (error) {
-        res.status(500).json({ message: "Error registering player", error });
+        res.status(500).json({ message: "Error registering parent", error });
     }
 });
-exports.registerPlayer = registerPlayer;
+exports.registerParent = registerParent;
 // ✅ Login
-// ✅ Login with Auto-Registration for Parents
 const login = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { email, password, role } = req.body;
@@ -136,47 +162,21 @@ const login = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             return;
         }
         let user;
-        if (role === "player") {
-            user = yield player_model_1.default.findOne({ email });
-            if (!user || !(yield bcryptjs_1.default.compare(password, user.password))) {
-                res.status(400).json({ message: "Invalid email or password" });
-                return;
-            }
-        }
-        else if (role === "coach") {
+        if (role === "coach") {
             user = yield coach_model_1.default.findOne({ email });
-            if (!user || !(yield bcryptjs_1.default.compare(password, user.password))) {
-                res.status(400).json({ message: "Invalid email or password" });
-                return;
-            }
         }
         else if (role === "admin") {
             user = yield admin_model_1.default.findOne({ email });
-            if (!user || !(yield bcryptjs_1.default.compare(password, user.password))) {
-                res.status(400).json({ message: "Invalid email or password" });
-                return;
-            }
         }
         else if (role === "parent") {
-            // Try to find the parent
             user = yield parent_model_1.default.findOne({ email });
-            // Auto-register if not found
-            if (!user) {
-                // You may choose a default name or require the parent to send one in the request
-                const defaultName = req.body.name || "Parent";
-                const hashedPassword = yield bcryptjs_1.default.hash(password, 10);
-                user = yield parent_model_1.default.create({ name: defaultName, email, password: hashedPassword });
-            }
-            else {
-                // Validate the password if the parent exists
-                if (!(yield bcryptjs_1.default.compare(password, user.password))) {
-                    res.status(400).json({ message: "Invalid email or password" });
-                    return;
-                }
-            }
         }
         else {
             res.status(400).json({ message: "Invalid role provided" });
+            return;
+        }
+        if (!user || !(yield bcryptjs_1.default.compare(password, user.password))) {
+            res.status(400).json({ message: "Invalid email or password" });
             return;
         }
         res.json({ message: "Login successful", token: generateToken(user._id, role) });
@@ -189,7 +189,7 @@ exports.login = login;
 // ✅ Get All Admins
 const getAllAdmins = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const admins = yield admin_model_1.default.find({}, "_id name"); // Fetch only necessary fields
+        const admins = yield admin_model_1.default.find({}, "_id name");
         res.status(200).json(admins);
     }
     catch (error) {

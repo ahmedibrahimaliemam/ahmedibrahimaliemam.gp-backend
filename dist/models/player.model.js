@@ -35,17 +35,30 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 const mongoose_1 = __importStar(require("mongoose"));
 const PlayerSchema = new mongoose_1.Schema({
-    //_id: { type: String, required: true }, // Phone number as _id
-    name: { type: String, required: true },
-    email: {
-        type: String,
-        required: true,
-        unique: true,
-        match: [/^\S+@\S+\.\S+$/, "Invalid email format"] // Basic email validation
-    },
-    position: { type: String, required: true },
-    coachId: { type: String, ref: "Coach", required: true }, // ✅ Change ObjectId -> String
-    teamId: { type: String, ref: "Team", required: true }, // ✅ Change ObjectId -> String
-    password: { type: String, required: true },
-});
+    _id: { type: String, required: true }, // Using phone number as the _id
+    short_name: { type: String, required: true },
+    //position: { type: String, required: true },
+    coachName: { type: String, ref: "Coach", required: true },
+    Team_name: { type: String, ref: "Team", required: true },
+    //password: { type: String, required: true },
+    preferred_foot: { type: String },
+    club_position: { type: String },
+    weak_foot: { type: Number },
+    weight_kg: { type: Number },
+    pace: { type: Number },
+    shooting: { type: Number },
+    passing: { type: Number },
+    dribbling: { type: Number },
+    height_cm: { type: Number },
+    defending: { type: Number },
+    overall: { type: Number },
+    physic: { type: Number },
+    player_face_url: { type: String },
+    goalkeeping_diving: { type: Number },
+    goalkeeping_handling: { type: Number },
+    goalkeeping_kicking: { type: Number },
+    goalkeeping_positioning: { type: Number },
+    goalkeeping_reflexes: { type: Number },
+    goalkeeping_speed: { type: Number },
+}, { timestamps: true });
 exports.default = mongoose_1.default.model("Player", PlayerSchema);

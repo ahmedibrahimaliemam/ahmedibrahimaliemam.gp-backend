@@ -34,13 +34,15 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 const mongoose_1 = __importStar(require("mongoose"));
-const ParentSchema = new mongoose_1.Schema({
-    _id: { type: String },
-    phoneNumber: { type: String, required: true }, // Unique identifier (phone number, etc.)
-    name: { type: String, required: true },
-    email: { type: String, required: true, unique: true },
-    password: { type: String, required: true },
-    players: [{ type: String, ref: "Player" }], // Relationship: each parent's children (players)
-}, { timestamps: true } // Automatically adds createdAt and updatedAt fields
-);
-exports.default = mongoose_1.default.model("Parent", ParentSchema);
+const AttendanceSchema = new mongoose_1.Schema({
+    teamId: { type: String, ref: "Team", required: true },
+    coachId: { type: String, ref: "Coach", required: true },
+    date: { type: Date, required: true },
+    records: [
+        {
+            playerId: { type: String, ref: "Player", required: true },
+            status: { type: String, enum: ["present", "absent"], required: true },
+        },
+    ],
+}, { timestamps: true });
+exports.default = mongoose_1.default.model("Attendance", AttendanceSchema);

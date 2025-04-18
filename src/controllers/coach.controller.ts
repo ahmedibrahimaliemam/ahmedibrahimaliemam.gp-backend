@@ -126,29 +126,42 @@ export const deleteMatch: RequestHandler = async (req, res) => {
     }
   };
 
-  export const getAllCoachesWithTeamsAndPlayers: RequestHandler = async (req, res) => {
-    try {
-      // Get all coaches (selecting _id and name only for brevity)
-      const coaches = await Coach.find({}, "_id name");
-      
-      // For each coach, fetch the teams that belong to them and populate players
-      const result = await Promise.all(
-        coaches.map(async (coach) => {
-          // Query teams where coachId matches coach._id
-          const teams = await Team.find({ coachId: coach._id })
-            .populate("players") // Populate all fields of players; you can choose to specify specific fields if needed
-            .exec();
-  
-          return {
-            coachId: coach._id,
-            coachName: coach.name,
-            teams, // Each team will include its populated players array
-          };
-        })
-      );
-  
-      res.status(200).json({ coaches: result });
-    } catch (error) {
-      res.status(500).json({ message: "Error fetching coaches", error });
-    }
-  };
+ // src/controllers/coach.controller.ts
+
+export const getAllCoachesWithTeamsAndPlayers: RequestHandler = async (req, res) => {
+  try {
+    // 1) Load coaches and populate their single team
+    const coaches = await Coach.find(
+      {}, 
+      "_id name email phoneNumber teamId"
+    )
+    .populate({
+      path: "teamId",
+      select: "_id name players",
+      populate: {
+        path: "players",
+        select: "_id short_name Team_name",
+      },
+    })
+    .exec();
+
+    // 2) Shape the response
+    const result = coaches.map((coach) => ({
+      coachId: coach._id,
+      coachName: coach.name,
+      email: coach.email,
+      phoneNumber: coach.phoneNumber,
+      team: coach.teamId
+
+    }));
+
+     res.status(200).json({ coaches: result });
+     return;
+  } catch (error) {
+    console.error("Error fetching coaches:", error);
+      res
+      .status(500)
+      .json({ message: "Error fetching coaches", error });
+      return;
+  }
+};
