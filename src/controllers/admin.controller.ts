@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import Team from "../models/team.model";
+import Player from "../models/player.model";
 import { RequestHandler } from "express";
 import Coach from "../models/coach.model";
 import Match from "../models/match.model";
@@ -155,5 +156,227 @@ export const deleteTeam: RequestHandler = async (req, res) => {
     res.status(200).json({ message: "Team deleted successfully", deletedTeam });
   } catch (error) {
     res.status(500).json({ message: "Error deleting team", error });
+  }
+};
+
+export const addMatch: RequestHandler = async (req, res): Promise<void> => {
+  try {
+    const { _id, team1, team2, date } = req.body;
+
+    // Validate required fields
+    if (!_id || !team1 || !team2 || !date) {
+      res.status(400).json({ message: "Missing required fields: _id, team1, team2, date" });
+      return;
+    }
+
+    // Validate teams exist
+    const [team1Exists] = await Promise.all([
+      Team.findById(team1),
+    ]);
+
+    if (!team1Exists) {
+      res.status(404).json({ message: "the Team not found" });
+      return;
+    }
+
+    if (team1 === team2) {
+      res.status(400).json({ message: "A team cannot play against itself" });
+      return;
+    }
+
+    // Validate date format
+    const parsedDate = new Date(date);
+    if (isNaN(parsedDate.getTime())) {
+      res.status(400).json({ message: "Invalid date format" });
+      return;
+    }
+
+    // Check for existing match ID
+    const existingMatch = await Match.findById(_id);
+    if (existingMatch) {
+      res.status(409).json({ message: "Match ID already exists" });
+      return;
+    }
+
+    // Create new match
+    const newMatch = new Match({
+      _id,
+      team1,
+      team2,
+      date: parsedDate,
+      // team1Score and team2Score will default to null
+    });
+
+    await newMatch.save();
+
+    // Update both teams' match schedules
+    await Promise.all([
+      Team.updateOne({ _id: team1 }, { $push: { matchSchedule: _id } }),
+      Team.updateOne({ _id: team2 }, { $push: { matchSchedule: _id } })
+    ]);
+
+    // Return match with virtual status
+    const createdMatch = await Match.findById(_id)
+      .populate('team1', 'name')
+      .populate('team2', 'name')
+      .lean();
+
+    res.status(201).json({ 
+      message: "Match created successfully",
+      match: {
+        ...createdMatch,
+        status: createdMatch?.status // Virtual field will be populated
+      }
+    });
+  } catch (error) {
+    console.error("Error adding match:", error);
+    res.status(500).json({ 
+      message: "Error adding match",
+      error: error instanceof Error ? error.message : "Unknown error"
+    });
+  }
+};
+
+//add player to team
+export const addPlayerToTeam: RequestHandler = async (req, res) => {
+  try {
+    const { teamId } = req.params;
+    const playerData = req.body;
+
+    // Validate required fields
+    if (!playerData.short_name) {
+      res.status(400).json({ message: "Missing required  short_name" });
+      return;
+    }
+
+    // 1. Validate team exists
+    const team = await Team.findById(teamId);
+   
+    
+    if (!team) {
+      res.status(404).json({ message: "Team not found" });
+      return;
+    }
+
+
+    // 3. Check for existing player
+    if (await Player.exists({ _id: playerData.short_name })) {
+      res.status(409).json({ message: "Player with this name already exists" });
+      return;
+    }
+
+    // 4. Create player document
+    const newPlayer = new Player({
+      ...playerData,
+      _id:playerData.short_name,
+      Team_name: team._id, // team._id is the team name (from Team model)
+      coachName: team.coachId
+    });
+
+    // 5. Save player and update team
+    await Promise.all([
+      newPlayer.save(),
+      Team.findByIdAndUpdate(
+        teamId,
+        { $push: { players: newPlayer._id } },
+        { new: true }
+      )
+    ]);
+
+    // 6. Return response
+    const createdPlayer = await Player.findById(newPlayer._id)
+      .populate('Team_name', 'name logo')
+      .lean();
+
+    res.status(201).json({
+      message: "Player added to team successfully",
+      player: {
+        ...createdPlayer,
+        team: createdPlayer?.Team_name,
+        Team_name: undefined // Remove the raw reference
+      }
+    });
+
+  } catch (error) {
+    console.error("Error adding player:", error);
+    res.status(500).json({
+      message: "Error adding player to team",
+      error: error instanceof Error ? error.message : "Unknown error"
+    });
+  }
+};
+export const getAllMatches: RequestHandler = async (req, res) => {
+  try {
+    const matches = await Match.find()
+      .populate('team1', 'name logo')
+      .populate('team2', 'name logo')
+      .sort({ date: -1 }) // Sort by most recent first
+      .lean();
+
+    const formattedMatches = matches.map(match => ({
+      _id: match._id,
+      team1: match.team1,
+      team2: match.team2,
+      date: match.date,
+      team1Score: match.team1Score,
+      team2Score: match.team2Score,
+      status: match.status // Virtual field from schema
+    }));
+
+    res.status(200).json({ matches: formattedMatches });
+  } catch (error) {
+    console.error("Error fetching matches:", error);
+    res.status(500).json({ 
+      message: "Error retrieving matches",
+      error: error instanceof Error ? error.message : "Unknown error"
+    });
+  }
+};
+export const getMatchesByTeamId: RequestHandler = async (req, res) => {
+  try {
+    const { teamId } = req.params;
+
+    // Validate team exists
+    const team = await Team.findById(teamId);
+    if (!team) {
+      res.status(404).json({ message: "Team not found" });
+      return;
+    }
+
+    const matches = await Match.find({
+      $or: [{ team1: teamId }, { team2: teamId }]
+    })
+    .populate('team1', 'name logo')
+    .populate('team2', 'name logo')
+    .sort({ date: 1 }) // Sort by upcoming matches first
+    .lean();
+
+    if (matches.length === 0) {
+      res.status(404).json({ message: "No matches found for this team" });
+      return;
+    }
+
+    const formattedMatches = matches.map(match => ({
+      _id: match._id,
+      team1: match.team1,
+      team2: match.team2,
+      date: match.date,
+      team1Score: match.team1Score,
+      team2Score: match.team2Score,
+      status: match.status, // Virtual field
+      isHomeGame: match.team1 === teamId // Add extra useful field
+    }));
+
+    res.status(200).json({
+      teamId,
+      teamName: team.name,
+      matches: formattedMatches
+    });
+  } catch (error) {
+    console.error("Error fetching team matches:", error);
+    res.status(500).json({ 
+      message: "Error retrieving team matches",
+      error: error instanceof Error ? error.message : "Unknown error"
+    });
   }
 };

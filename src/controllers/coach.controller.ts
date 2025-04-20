@@ -165,3 +165,84 @@ export const getAllCoachesWithTeamsAndPlayers: RequestHandler = async (req, res)
       return;
   }
 };
+export const getTeamForCurrentCoach: RequestHandler = async (req, res): Promise<void> => {
+  try {
+    const authReq = req as AuthenticatedRequest;
+    const coachId = authReq.user?._id; // This is the phone number string
+
+    if (!coachId) {
+      res.status(403).json({ message: "Not authorized" });
+      return;
+    }
+
+    // Find coach with deep population
+    const coach = await Coach.findById(coachId)
+      .populate({
+        path: 'teamId',
+        model: 'Team',
+        populate: {
+          path: 'players',
+          model: 'Player',
+          select: '_id short_name Team_name position age nationality' // Match Player model
+        }
+      })
+      .lean()
+      .exec();
+
+    if (!coach) {
+      res.status(404).json({ message: "Coach not found" });
+      return;
+    }
+
+    if (!coach.teamId || typeof coach.teamId === 'string') {
+      res.status(404).json({ message: "No team assigned to this coach" });
+      return;
+    }
+
+    // Type guard for populated team
+    const team = coach.teamId as unknown as {
+      _id: string;
+      name: string;
+      logo: string;
+      players: Array<{
+        _id: string;
+        short_name: string;
+        Team_name: string;
+        position?: string;
+        age?: number;
+        nationality?: string;
+      }>;
+    };
+
+    // Build response
+    const response = {
+      coach: {
+        _id: coach._id,
+        name: coach.name,
+        email: coach.email,
+        phoneNumber: coach.phoneNumber
+      },
+      team: {
+        _id: team._id,
+        name: team.name,
+        logo: team.logo,
+        players: team.players.map(player => ({
+          id: player._id,
+          shortName: player.short_name,
+          teamName: player.Team_name,
+          position: player.position,
+          age: player.age,
+          nationality: player.nationality
+        }))
+      }
+    };
+
+    res.status(200).json(response);
+  } catch (error) {
+    console.error("Error fetching coach's team:", error);
+    res.status(500).json({ 
+      message: "Error retrieving team details",
+      error: error instanceof Error ? error.message : "Unknown error"
+    });
+  }
+};

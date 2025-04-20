@@ -1,5 +1,5 @@
 import express from "express";
-import { addMatch, updateMatchResult ,getMatchesByCoach,deleteMatch, getAllCoachesWithTeamsAndPlayers } from "../controllers/coach.controller";
+import { getMatchesByCoach, getAllCoachesWithTeamsAndPlayers, getTeamForCurrentCoach } from "../controllers/coach.controller";
 import { protect } from "../middlewars/auth.middleware";
 import { verifyAdmin } from "../controllers/auth.controller";
 const router = express.Router();
@@ -9,6 +9,7 @@ const router = express.Router();
 //router.delete("/delete-match/:id", protect, deleteMatch);
 router.get("/matches", protect,getMatchesByCoach);
 router.get("/", verifyAdmin, getAllCoachesWithTeamsAndPlayers);
+router.get('/my-team', protect, getTeamForCurrentCoach);
 // In src/routes/coach.routes.ts
 router.get("/test", (req, res) => {
     res.send("Coach routes are working!");

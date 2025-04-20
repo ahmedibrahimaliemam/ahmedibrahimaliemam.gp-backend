@@ -1,37 +1,71 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.runFaceRecognition = void 0;
-const child_process_1 = require("child_process");
+exports.loadModel = loadModel;
+exports.predict = predict;
+const tf = __importStar(require("@tensorflow/tfjs-node"));
 const path_1 = __importDefault(require("path"));
-const runFaceRecognition = () => {
-    return new Promise((resolve, reject) => {
-        const pythonPath = "C:\\Users\\Ahmed Farhan\\AppData\\Local\\Programs\\Python\\Python313\\python.exe"; // ✅ Use full path
-        const scriptPath = path_1.default.join(__dirname, "../../scripts/recognize.py");
-        console.log("Running recognition script at:", scriptPath);
-        const pythonProcess = (0, child_process_1.spawn)(pythonPath, [scriptPath]);
-        let data = "";
-        let error = "";
-        pythonProcess.stdout.on("data", (chunk) => {
-            data += chunk.toString();
-        });
-        pythonProcess.stderr.on("data", (chunk) => {
-            error += chunk.toString();
-        });
-        pythonProcess.on("close", (code) => {
-            if (code === 0) {
-                const recognizedPlayers = data.trim().split("\n").filter(Boolean);
-                resolve(recognizedPlayers);
-            }
-            else {
-                reject(`Python error: ${error}`);
-            }
-        });
-        pythonProcess.on("error", (err) => {
-            reject(`Failed to start Python process: ${err.message}`);
-        });
+let model;
+function loadModel() {
+    return __awaiter(this, void 0, void 0, function* () {
+        if (!model) {
+            const modelPath = path_1.default.join(__dirname, '../../assets/model.json');
+            model = yield tf.loadLayersModel(`file://${modelPath}`);
+            console.log('Model loaded successfully');
+        }
+        return model;
     });
-};
-exports.runFaceRecognition = runFaceRecognition;
+}
+function predict(inputData) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const model = yield loadModel();
+        // Preprocess input data to match model's expected input shape/format
+        const tensorInput = tf.tensor(inputData); // Adjust preprocessing as needed
+        const prediction = model.predict(tensorInput);
+        return prediction.array();
+    });
+}

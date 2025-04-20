@@ -1,36 +1,23 @@
-import { spawn } from "child_process";
-import path from "path";
+import * as tf from '@tensorflow/tfjs-node';
+import path from 'path';
 
-export const runFaceRecognition = (): Promise<string[]> => {
-  return new Promise((resolve, reject) => {
-    const pythonPath = "C:\\Users\\Ahmed Farhan\\AppData\\Local\\Programs\\Python\\Python313\\python.exe"; // ✅ Use full path
-    const scriptPath = path.join(__dirname,"../../scripts/recognize.py");
-    console.log("Running recognition script at:", scriptPath);
+let model: tf.LayersModel;
 
-    const pythonProcess = spawn(pythonPath, [scriptPath]);
+export async function loadModel() {
+  if (!model) {
+    const modelPath = path.join(__dirname, '../../assets/model.json');
+    model = await tf.loadLayersModel(`file://${modelPath}`);
+    console.log('Model loaded successfully');
+  }
+  return model;
+}
 
-    let data = "";
-    let error = "";
-
-    pythonProcess.stdout.on("data", (chunk) => {
-      data += chunk.toString();
-    });
-
-    pythonProcess.stderr.on("data", (chunk) => {
-      error += chunk.toString();
-    });
-
-    pythonProcess.on("close", (code) => {
-      if (code === 0) {
-        const recognizedPlayers = data.trim().split("\n").filter(Boolean);
-        resolve(recognizedPlayers);
-      } else {
-        reject(`Python error: ${error}`);
-      }
-    });
-
-    pythonProcess.on("error", (err) => {
-      reject(`Failed to start Python process: ${err.message}`);
-    });
-  });
-};
+export async function predict(inputData: any) {
+  const model = await loadModel();
+  
+  // Preprocess input data to match model's expected input shape/format
+  const tensorInput = tf.tensor(inputData); // Adjust preprocessing as needed
+  
+  const prediction = model.predict(tensorInput) as tf.Tensor;
+  return prediction.array();
+}

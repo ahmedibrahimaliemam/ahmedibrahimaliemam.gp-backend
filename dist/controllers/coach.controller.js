@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getAllCoachesWithTeamsAndPlayers = exports.deleteMatch = exports.getMatchesByCoach = exports.updateMatchResult = exports.addMatch = void 0;
+exports.getTeamForCurrentCoach = exports.getAllCoachesWithTeamsAndPlayers = exports.deleteMatch = exports.getMatchesByCoach = exports.updateMatchResult = exports.addMatch = void 0;
 const match_model_1 = __importDefault(require("../models/match.model"));
 const coach_model_1 = __importDefault(require("../models/coach.model"));
 const team_model_1 = __importDefault(require("../models/team.model"));
@@ -165,3 +165,68 @@ const getAllCoachesWithTeamsAndPlayers = (req, res) => __awaiter(void 0, void 0,
     }
 });
 exports.getAllCoachesWithTeamsAndPlayers = getAllCoachesWithTeamsAndPlayers;
+const getTeamForCurrentCoach = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    try {
+        const authReq = req;
+        const coachId = (_a = authReq.user) === null || _a === void 0 ? void 0 : _a._id; // This is the phone number string
+        if (!coachId) {
+            res.status(403).json({ message: "Not authorized" });
+            return;
+        }
+        // Find coach with deep population
+        const coach = yield coach_model_1.default.findById(coachId)
+            .populate({
+            path: 'teamId',
+            model: 'Team',
+            populate: {
+                path: 'players',
+                model: 'Player',
+                select: '_id short_name Team_name position age nationality' // Match Player model
+            }
+        })
+            .lean()
+            .exec();
+        if (!coach) {
+            res.status(404).json({ message: "Coach not found" });
+            return;
+        }
+        if (!coach.teamId || typeof coach.teamId === 'string') {
+            res.status(404).json({ message: "No team assigned to this coach" });
+            return;
+        }
+        // Type guard for populated team
+        const team = coach.teamId;
+        // Build response
+        const response = {
+            coach: {
+                _id: coach._id,
+                name: coach.name,
+                email: coach.email,
+                phoneNumber: coach.phoneNumber
+            },
+            team: {
+                _id: team._id,
+                name: team.name,
+                logo: team.logo,
+                players: team.players.map(player => ({
+                    id: player._id,
+                    shortName: player.short_name,
+                    teamName: player.Team_name,
+                    position: player.position,
+                    age: player.age,
+                    nationality: player.nationality
+                }))
+            }
+        };
+        res.status(200).json(response);
+    }
+    catch (error) {
+        console.error("Error fetching coach's team:", error);
+        res.status(500).json({
+            message: "Error retrieving team details",
+            error: error instanceof Error ? error.message : "Unknown error"
+        });
+    }
+});
+exports.getTeamForCurrentCoach = getTeamForCurrentCoach;

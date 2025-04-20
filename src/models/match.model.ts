@@ -15,7 +15,7 @@ const MatchSchema = new Schema<IMatch>(
   {
     _id: { type: String, required: true },
     team1: { type: String, ref: "Team", required: true },
-    team2: { type: String, ref: "Team", required: true },
+    team2: { type: String, ref: "Team", required:true },
     date: { type: Date, required: true },
     team1Score: { type: Number, default: null },
     team2Score: { type: Number, default: null },

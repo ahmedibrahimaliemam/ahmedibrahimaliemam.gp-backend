@@ -38,7 +38,7 @@ const PlayerSchema = new mongoose_1.Schema({
     _id: { type: String, required: true }, // Using phone number as the _id
     short_name: { type: String, required: true },
     //position: { type: String, required: true },
-    coachName: { type: String, ref: "Coach", required: true },
+    coachName: { type: String, ref: "Coach" },
     Team_name: { type: String, ref: "Team", required: true },
     //password: { type: String, required: true },
     preferred_foot: { type: String },
@@ -46,6 +46,7 @@ const PlayerSchema = new mongoose_1.Schema({
     weak_foot: { type: Number },
     weight_kg: { type: Number },
     pace: { type: Number },
+    attacking_crossing: { type: Number },
     shooting: { type: Number },
     passing: { type: Number },
     dribbling: { type: Number },
