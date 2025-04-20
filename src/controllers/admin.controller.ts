@@ -308,8 +308,6 @@ export const addPlayerToTeam: RequestHandler = async (req, res) => {
 export const getAllMatches: RequestHandler = async (req, res) => {
   try {
     const matches = await Match.find()
-      .populate('team1', 'name logo')
-      .populate('team2', 'name logo')
       .sort({ date: -1 }) // Sort by most recent first
       .lean();
 
@@ -346,8 +344,6 @@ export const getMatchesByTeamId: RequestHandler = async (req, res) => {
     const matches = await Match.find({
       $or: [{ team1: teamId }, { team2: teamId }]
     })
-    .populate('team1', 'name logo')
-    .populate('team2', 'name logo')
     .sort({ date: 1 }) // Sort by upcoming matches first
     .lean();
 
