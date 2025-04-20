@@ -108,23 +108,23 @@ export const getMatchesByCoach: RequestHandler = async (req, res): Promise<void>
     }
   };
 // Delete Match
-export const deleteMatch: RequestHandler = async (req, res) => {
-    try {
-      const { id } = req.params;
+// export const deleteMatch: RequestHandler = async (req, res) => {
+//     try {
+//       const { id } = req.params;
   
-      const match = await Match.findById(id);
-      if (!match) {
-        res.status(404).json({ message: "Match not found" });
-        return;
-      }
+//       const match = await Match.findById(id);
+//       if (!match) {
+//         res.status(404).json({ message: "Match not found" });
+//         return;
+//       }
   
-      await Match.findByIdAndDelete(id);
-      res.status(200).json({ message: "Match deleted successfully" });
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ message: "Error deleting match", error });
-    }
-  };
+//       await Match.findByIdAndDelete(id);
+//       res.status(200).json({ message: "Match deleted successfully" });
+//     } catch (error) {
+//       console.error(error);
+//       res.status(500).json({ message: "Error deleting match", error });
+//     }
+//   };
 
  // src/controllers/coach.controller.ts
 

@@ -7,7 +7,6 @@ import adminRoutes from "./routes/admin.routes";
 import coachRoutes from "./routes/coach.routes";
 import playerRoutes from "./routes/player.routes";
 import importRoutes from "./routes/import.routes";
-import attendanceRoutes from "./routes/attendance.routes";
 import matchRoutes from "./routes/match.routes";
 import parentRoutes from "./routes/parent.routes";
 import fs from 'fs';

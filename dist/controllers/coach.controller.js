@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getTeamForCurrentCoach = exports.getAllCoachesWithTeamsAndPlayers = exports.deleteMatch = exports.getMatchesByCoach = exports.updateMatchResult = exports.addMatch = void 0;
+exports.getTeamForCurrentCoach = exports.getAllCoachesWithTeamsAndPlayers = exports.getMatchesByCoach = exports.updateMatchResult = exports.addMatch = void 0;
 const match_model_1 = __importDefault(require("../models/match.model"));
 const coach_model_1 = __importDefault(require("../models/coach.model"));
 const team_model_1 = __importDefault(require("../models/team.model"));
@@ -114,23 +114,21 @@ const getMatchesByCoach = (req, res) => __awaiter(void 0, void 0, void 0, functi
 });
 exports.getMatchesByCoach = getMatchesByCoach;
 // Delete Match
-const deleteMatch = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    try {
-        const { id } = req.params;
-        const match = yield match_model_1.default.findById(id);
-        if (!match) {
-            res.status(404).json({ message: "Match not found" });
-            return;
-        }
-        yield match_model_1.default.findByIdAndDelete(id);
-        res.status(200).json({ message: "Match deleted successfully" });
-    }
-    catch (error) {
-        console.error(error);
-        res.status(500).json({ message: "Error deleting match", error });
-    }
-});
-exports.deleteMatch = deleteMatch;
+// export const deleteMatch: RequestHandler = async (req, res) => {
+//     try {
+//       const { id } = req.params;
+//       const match = await Match.findById(id);
+//       if (!match) {
+//         res.status(404).json({ message: "Match not found" });
+//         return;
+//       }
+//       await Match.findByIdAndDelete(id);
+//       res.status(200).json({ message: "Match deleted successfully" });
+//     } catch (error) {
+//       console.error(error);
+//       res.status(500).json({ message: "Error deleting match", error });
+//     }
+//   };
 // src/controllers/coach.controller.ts
 const getAllCoachesWithTeamsAndPlayers = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
