@@ -167,7 +167,7 @@ const getTeamForCurrentCoach = (req, res) => __awaiter(void 0, void 0, void 0, f
     var _a;
     try {
         const authReq = req;
-        const coachId = (_a = authReq.user) === null || _a === void 0 ? void 0 : _a._id; // This is the phone number string
+        const coachId = (_a = authReq.user) === null || _a === void 0 ? void 0 : _a._id;
         if (!coachId) {
             res.status(403).json({ message: "Not authorized" });
             return;
@@ -179,8 +179,7 @@ const getTeamForCurrentCoach = (req, res) => __awaiter(void 0, void 0, void 0, f
             model: 'Team',
             populate: {
                 path: 'players',
-                model: 'Player',
-                select: '_id short_name Team_name position age nationality' // Match Player model
+                model: 'Player' // Remove select to get all fields
             }
         })
             .lean()
@@ -195,7 +194,7 @@ const getTeamForCurrentCoach = (req, res) => __awaiter(void 0, void 0, void 0, f
         }
         // Type guard for populated team
         const team = coach.teamId;
-        // Build response
+        // Build response with all player attributes
         const response = {
             coach: {
                 _id: coach._id,
@@ -208,12 +207,39 @@ const getTeamForCurrentCoach = (req, res) => __awaiter(void 0, void 0, void 0, f
                 name: team.name,
                 logo: team.logo,
                 players: team.players.map(player => ({
+                    // Player identity
                     id: player._id,
                     shortName: player.short_name,
                     teamName: player.Team_name,
-                    position: player.position,
-                    age: player.age,
-                    nationality: player.nationality
+                    // Physical attributes
+                    overall: player.overall,
+                    height: player.height_cm,
+                    weight: player.weight_kg,
+                    // Positional info
+                    clubPosition: player.club_position,
+                    clubName: player.club_name,
+                    // Technical attributes
+                    attackingCrossing: player.attacking_crossing,
+                    preferredFoot: player.preferred_foot,
+                    weakFoot: player.weak_foot,
+                    // Stats
+                    pace: player.pace,
+                    shooting: player.shooting,
+                    passing: player.passing,
+                    dribbling: player.dribbling,
+                    defending: player.defending,
+                    physic: player.physic,
+                    // Goalkeeping stats
+                    goalkeeping: {
+                        diving: player.goalkeeping_diving,
+                        handling: player.goalkeeping_handling,
+                        kicking: player.goalkeeping_kicking,
+                        positioning: player.goalkeeping_positioning,
+                        reflexes: player.goalkeeping_reflexes,
+                        speed: player.goalkeeping_speed
+                    },
+                    // Media
+                    playerFaceUrl: player.player_face_url
                 }))
             }
         };

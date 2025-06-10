@@ -23,7 +23,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getAllPlayers = exports.deletePlayer = exports.updatePlayer = exports.addPlayer = void 0;
+exports.updatePlayerPosition = exports.getAllPlayers = exports.deletePlayer = exports.updatePlayer = exports.addPlayer = void 0;
 const player_model_1 = __importDefault(require("../models/player.model"));
 const team_model_1 = __importDefault(require("../models/team.model"));
 // Helper function to check if user is admin or coach.
@@ -161,3 +161,42 @@ const getAllPlayers = (req, res) => __awaiter(void 0, void 0, void 0, function* 
     }
 });
 exports.getAllPlayers = getAllPlayers;
+/**
+ * Update ONLY the position of a player.
+ * Only accessible by admin and coach.
+ */
+const updatePlayerPosition = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { id } = req.params;
+        const { club_position } = req.body; // Expecting only 'club_position' in the request body
+        const authReq = req;
+        const user = authReq.user;
+        // Check if user is admin or coach
+        if (!isAdminOrCoach(user)) {
+            res.status(403).json({
+                message: "Unauthorized: Only admins and coaches can update player positions"
+            });
+            return;
+        }
+        // Find and update ONLY the player's position
+        const updatedPlayer = yield player_model_1.default.findByIdAndUpdate(id, { club_position }, // Update only the position field
+        { new: true } // Return the updated player
+        );
+        if (!updatedPlayer) {
+            res.status(404).json({ message: "Player not found" });
+            return;
+        }
+        res.status(200).json({
+            message: "Player position updated successfully",
+            player: updatedPlayer
+        });
+    }
+    catch (error) {
+        console.error("Error updating player position:", error);
+        res.status(500).json({
+            message: "Error updating player position",
+            error
+        });
+    }
+});
+exports.updatePlayerPosition = updatePlayerPosition;

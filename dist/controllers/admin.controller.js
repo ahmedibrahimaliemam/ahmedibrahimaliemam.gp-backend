@@ -263,8 +263,6 @@ exports.addPlayerToTeam = addPlayerToTeam;
 const getAllMatches = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const matches = yield match_model_1.default.find()
-            .populate('team1', 'name logo')
-            .populate('team2', 'name logo')
             .sort({ date: -1 }) // Sort by most recent first
             .lean();
         const formattedMatches = matches.map(match => ({
@@ -299,8 +297,6 @@ const getMatchesByTeamId = (req, res) => __awaiter(void 0, void 0, void 0, funct
         const matches = yield match_model_1.default.find({
             $or: [{ team1: teamId }, { team2: teamId }]
         })
-            .populate('team1', 'name logo')
-            .populate('team2', 'name logo')
             .sort({ date: 1 }) // Sort by upcoming matches first
             .lean();
         if (matches.length === 0) {

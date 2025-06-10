@@ -12,4 +12,5 @@ router.post("/", auth_middleware_1.protect, player_controller_1.addPlayer);
 router.get("/", auth_middleware_1.protect, player_controller_1.getAllPlayers); // Endpoint to add a new player
 router.put("/:id", auth_middleware_1.protect, player_controller_1.updatePlayer); // Endpoint to update a player by id
 router.delete("/:id", auth_middleware_1.protect, player_controller_1.deletePlayer); // Endpoint to delete a player by id
+router.patch("/:id/position", auth_middleware_1.protect, player_controller_1.updatePlayerPosition); // PATCH /players/123/position
 exports.default = router;

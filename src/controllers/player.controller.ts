@@ -165,3 +165,47 @@ export const getAllPlayers: RequestHandler = async (req, res): Promise<void> => 
       res.status(500).json({ message: "Error retrieving players", error });
     }
   };
+
+/**
+ * Update ONLY the position of a player.
+ * Only accessible by admin and coach.
+ */
+export const updatePlayerPosition: RequestHandler = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { club_position } = req.body; // Expecting only 'club_position' in the request body
+    const authReq = req as Request & { user?: any };
+    const user = authReq.user;
+    // Check if user is admin or coach
+    if (!isAdminOrCoach(user)) {
+      res.status(403).json({ 
+        message: "Unauthorized: Only admins and coaches can update player positions" 
+      });
+      return;
+    }
+
+    // Find and update ONLY the player's position
+    const updatedPlayer = await Player.findByIdAndUpdate(
+      id,
+      { club_position }, // Update only the position field
+      { new: true } // Return the updated player
+    );
+
+    if (!updatedPlayer) {
+     res.status(404).json({ message: "Player not found" });
+     return;
+    }
+
+    res.status(200).json({ 
+      message: "Player position updated successfully",
+      player: updatedPlayer 
+    });
+
+  } catch (error) {
+    console.error("Error updating player position:", error);
+    res.status(500).json({ 
+      message: "Error updating player position", 
+      error 
+    });
+  }
+};

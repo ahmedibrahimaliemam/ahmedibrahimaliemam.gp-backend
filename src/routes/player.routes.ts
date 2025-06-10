@@ -1,5 +1,5 @@
 import express from "express";
-import { addPlayer, updatePlayer, deletePlayer, getAllPlayers } from "../controllers/player.controller";
+import { addPlayer, updatePlayer, deletePlayer, getAllPlayers , updatePlayerPosition } from "../controllers/player.controller";
 import { protect } from "../middlewars/auth.middleware"; // Your auth middleware for verifying JWT token
 
 const router = express.Router();
@@ -9,5 +9,6 @@ router.post("/", protect, addPlayer);
 router.get("/",protect,getAllPlayers);            // Endpoint to add a new player
 router.put("/:id", protect, updatePlayer);           // Endpoint to update a player by id
 router.delete("/:id", protect, deletePlayer);        // Endpoint to delete a player by id
+router.patch("/:id/position", protect,updatePlayerPosition); // PATCH /players/123/position
 
 export default router;
