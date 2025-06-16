@@ -16,6 +16,7 @@ const match_routes_1 = __importDefault(require("./routes/match.routes"));
 const parent_routes_1 = __importDefault(require("./routes/parent.routes"));
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
+const payment_routes_1 = __importDefault(require("./routes/payment.routes"));
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 // Call this after connecting to MongoDB
@@ -27,6 +28,8 @@ app.use("/api/admin", admin_routes_1.default);
 app.use("/api/coach", coach_routes_1.default);
 app.use("/api/players", player_routes_1.default);
 app.use("/api/match", match_routes_1.default);
+// Add the payment route
+app.use("/api/payment", payment_routes_1.default);
 //app.use("/api",attendanceRoutes);
 app.use("/api/parents", parent_routes_1.default);
 const uploadPath = path_1.default.join(__dirname, '../uploads');

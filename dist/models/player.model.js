@@ -35,12 +35,11 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 const mongoose_1 = __importStar(require("mongoose"));
 const PlayerSchema = new mongoose_1.Schema({
-    _id: { type: String, required: true }, // Using phone number as the _id
+    _id: { type: String, required: true },
     short_name: { type: String, required: true },
-    //position: { type: String, required: true },
     coachName: { type: String, ref: "Coach" },
+    parentId: { type: String, ref: "Parent" }, // ✅ Add this
     Team_name: { type: String, ref: "Team", required: true },
-    //password: { type: String, required: true },
     preferred_foot: { type: String },
     club_position: { type: String },
     weak_foot: { type: Number },
@@ -54,6 +53,7 @@ const PlayerSchema = new mongoose_1.Schema({
     defending: { type: Number },
     overall: { type: Number },
     physic: { type: Number },
+    club_name: { type: String },
     player_face_url: { type: String },
     goalkeeping_diving: { type: Number },
     goalkeeping_handling: { type: Number },
@@ -61,5 +61,11 @@ const PlayerSchema = new mongoose_1.Schema({
     goalkeeping_positioning: { type: Number },
     goalkeeping_reflexes: { type: Number },
     goalkeeping_speed: { type: Number },
+    attendance: [{
+            date: { type: Date, required: true },
+            present: { type: Boolean, required: true },
+            checkedInAt: { type: Date },
+            source: { type: String }
+        }]
 }, { timestamps: true });
 exports.default = mongoose_1.default.model("Player", PlayerSchema);

@@ -17,11 +17,11 @@ const express_validator_1 = require("express-validator");
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const dotenv_1 = __importDefault(require("dotenv"));
-const player_model_1 = __importDefault(require("../models/player.model"));
+const team_model_1 = __importDefault(require("../models/team.model"));
+const parent_model_1 = __importDefault(require("../models/parent.model"));
 const coach_model_1 = __importDefault(require("../models/coach.model"));
 const admin_model_1 = __importDefault(require("../models/admin.model"));
-const parent_model_1 = __importDefault(require("../models/parent.model"));
-const team_model_1 = __importDefault(require("../models/team.model"));
+const player_model_1 = __importDefault(require("../models/player.model"));
 dotenv_1.default.config();
 // ✅ Generate JWT Token
 const generateToken = (_id, role) => {
@@ -179,9 +179,38 @@ const login = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             res.status(400).json({ message: "Invalid email or password" });
             return;
         }
-        res.json({ message: "Login successful", token: generateToken(user._id, role) });
+        const token = generateToken(user._id, role);
+        if (role === "parent") {
+            const parent = user;
+            const players = yield player_model_1.default.find({
+                _id: { $in: parent.players },
+            }).select("-password");
+            res.json({
+                message: "Login successful",
+                token,
+                parent: {
+                    id: parent._id,
+                    name: parent.name,
+                    email: parent.email,
+                },
+                players,
+            });
+        }
+        else {
+            res.json({
+                message: "Login successful",
+                token,
+                user: {
+                    id: user._id,
+                    role,
+                    name: user.name,
+                    email: user.email,
+                },
+            });
+        }
     }
     catch (error) {
+        console.error("Login error:", error);
         res.status(500).json({ message: "Error logging in", error });
     }
 });

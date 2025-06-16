@@ -3,11 +3,14 @@ import { check, validationResult, ValidationChain } from "express-validator";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
-import Player from "../models/player.model";
+import Team from "../models/team.model";
+import Parent, { IParent } from "../models/parent.model";
 import Coach from "../models/coach.model";
 import Admin from "../models/admin.model";
-import Parent from "../models/parent.model";
-import Team from "../models/team.model";
+import Player from "../models/player.model";
+
+
+
 dotenv.config();
 
 // ✅ Generate JWT Token
@@ -156,6 +159,8 @@ export const registerCoach: RequestHandler = async (req, res): Promise<void> => 
   }
 };
 // ✅ Login
+
+
 const login: RequestHandler = async (req, res): Promise<void> => {
   try {
     const { email, password, role } = req.body;
@@ -165,7 +170,7 @@ const login: RequestHandler = async (req, res): Promise<void> => {
       return;
     }
 
-    let user;
+    let user: any;
 
     if (role === "coach") {
       user = await Coach.findOne({ email });
@@ -183,11 +188,44 @@ const login: RequestHandler = async (req, res): Promise<void> => {
       return;
     }
 
-    res.json({ message: "Login successful", token: generateToken(user._id, role) });
+    const token = generateToken(user._id, role);
+
+    if (role === "parent") {
+      const parent = user as IParent;
+
+      const players = await Player.find({
+        _id: { $in: parent.players },
+      }).select("-password");
+
+      res.json({
+        message: "Login successful",
+        token,
+        parent: {
+          id: parent._id,
+          name: parent.name,
+          email: parent.email,
+        },
+        players,
+      });
+    } else {
+      res.json({
+        message: "Login successful",
+        token,
+        user: {
+          id: user._id,
+          role,
+          name: user.name,
+          email: user.email,
+        },
+      });
+    }
   } catch (error) {
+    console.error("Login error:", error);
     res.status(500).json({ message: "Error logging in", error });
   }
 };
+
+
 
 // ✅ Get All Admins
 const getAllAdmins: RequestHandler = async (req, res): Promise<void> => {

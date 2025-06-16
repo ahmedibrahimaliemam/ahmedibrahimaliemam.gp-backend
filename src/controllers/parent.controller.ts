@@ -3,6 +3,8 @@ import { RequestHandler } from "express";
 import Parent from "../models/parent.model";
 import Player from "../models/player.model";
 import Match from "../models/match.model";
+import axios from 'axios';
+
 
 export const getPlayerAndMatchesForParent: RequestHandler = async (req, res) => {
   try {
@@ -40,3 +42,4 @@ export const getPlayerAndMatchesForParent: RequestHandler = async (req, res) => 
     res.status(500).json({ message: "Server error", error });
   }
 };
+

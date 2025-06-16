@@ -11,6 +11,7 @@ import matchRoutes from "./routes/match.routes";
 import parentRoutes from "./routes/parent.routes";
 import fs from 'fs';
 import path from 'path';
+import paymentRoutes from "./routes/payment.routes";
 
 dotenv.config();
 const app = express();
@@ -25,6 +26,8 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/coach", coachRoutes);
 app.use("/api/players", playerRoutes);
 app.use("/api/match",matchRoutes);
+// Add the payment route
+app.use("/api/payment", paymentRoutes);
 //app.use("/api",attendanceRoutes);
 app.use("/api/parents", parentRoutes);
 const uploadPath = path.join(__dirname, '../uploads');

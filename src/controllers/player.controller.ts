@@ -209,3 +209,237 @@ export const updatePlayerPosition: RequestHandler = async (req, res) => {
     });
   }
 };
+
+
+//find the attendance of the player
+
+export const markAttendance = async (req: Request, res: Response) => {
+  try {
+    const { playerId, source } = req.body;
+
+    if (!playerId) {
+       res.status(400).json({ error: "playerId is required" });
+       return;
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // normalize to midnight
+
+    // Check if the player exists
+    const player = await Player.findById(playerId);
+    if (!player) {
+     res.status(404).json({ error: "Player not found" });
+     return
+    }
+
+    // Check if attendance already marked for today
+    const alreadyMarked = player.attendance?.some(record => {
+      const recordDate = new Date(record.date);
+      recordDate.setHours(0, 0, 0, 0);
+       recordDate.getTime() === today.getTime();
+       return;
+    });
+
+    if (alreadyMarked) {
+     res.status(200).json({ message: "Attendance already marked for today" });
+     return;
+    }
+
+    // Push new attendance record
+    player.attendance?.push({
+      date: new Date(),
+      present: true,
+      checkedInAt: new Date(),
+      source: source || "face_recognition"
+    });
+
+    await player.save();
+
+    res.status(200).json({ message: "Attendance marked", playerId: player._id });
+    return;
+  } catch (err) {
+    console.error("Attendance error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+
+
+// ... existing markAttendance here ...
+
+export const getAttendanceByDate = async (req: Request, res: Response) => {
+  try {
+    const { date } = req.query;
+
+    if (!date || typeof date !== "string") {
+       res.status(400).json({ error: "Please provide a valid date in YYYY-MM-DD format." });
+       return;
+    }
+
+    const targetDate = new Date(date);
+    if (isNaN(targetDate.getTime())) {
+      res.status(400).json({ error: "Invalid date format." });
+      return;
+    }
+
+    targetDate.setHours(0, 0, 0, 0);
+    const nextDay = new Date(targetDate);
+    nextDay.setDate(nextDay.getDate() + 1);
+
+    // Find players who have an attendance record matching the date
+    const players = await Player.find({
+      attendance: {
+        $elemMatch: {
+          date: {
+            $gte: targetDate,
+            $lt: nextDay
+          }
+        }
+      }
+    }).select("_id short_name attendance");
+
+    // Filter to include only attendance records from that day
+    const result = players.map(player => {
+      const attendanceOnDate = player.attendance?.filter(record => {
+        const recordDate = new Date(record.date);
+        recordDate.setHours(0, 0, 0, 0);
+        recordDate.getTime() === targetDate.getTime();
+        return;
+      }) || [];
+
+      return {
+        playerId: player._id,
+        name: player.short_name,
+        attendance: attendanceOnDate
+      };
+    });
+
+    res.status(200).json(result);
+  } catch (err) {
+    console.error("Error fetching attendance:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+// ... other functions ...
+
+export const markMultipleAttendances = async (req: Request, res: Response) => {
+  try {
+    console.log(`tryyyyyy`);
+    
+    const { playerIds, source } = req.body;
+
+    if (!Array.isArray(playerIds) || playerIds.length === 0) {
+      res.status(400).json({ error: "playerIds must be a non-empty array." });
+      return;
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const updatedPlayers = [];
+
+    for (const id of playerIds) {
+      const player = await Player.findById(id);
+      if (!player) continue;
+
+      const alreadyMarked = player.attendance?.some(record => {
+        const recordDate = new Date(record.date);
+        recordDate.setHours(0, 0, 0, 0);
+        return recordDate.getTime() === today.getTime();
+      });
+
+      if (!alreadyMarked) {
+        player.attendance?.push({
+          date: new Date(),
+          present: true,
+          checkedInAt: new Date(),
+          source: source || "face_recognition"
+        });
+
+        await player.save();
+        updatedPlayers.push({
+          playerId: player._id,
+          name: player.short_name
+        });
+      }
+    }
+
+    res.status(200).json({
+      message: `Attendance marked for ${updatedPlayers.length} players.`,
+      marked: updatedPlayers
+    });
+  } catch (err) {
+    console.error("Error in multi-attendance:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+//get full attendance
+export const getFullAttendanceByDate = async (req: Request, res: Response) => {
+  try {
+    const { date } = req.query;
+
+    if (!date || typeof date !== "string") {
+      res.status(400).json({ error: "Please provide a valid date in YYYY-MM-DD format." });
+      return;
+    }
+
+    const targetDate = new Date(date);
+    if (isNaN(targetDate.getTime())) {
+      res.status(400).json({ error: "Invalid date format." });
+      return;
+    }
+
+    targetDate.setHours(0, 0, 0, 0);
+    const nextDay = new Date(targetDate);
+    nextDay.setDate(nextDay.getDate() + 1);
+
+    // Fetch all players
+    const players = await Player.find().select("_id short_name attendance");
+
+    const result = players.map(player => {
+      const hasAttendance = player.attendance?.some(record => {
+        const recordDate = new Date(record.date);
+        recordDate.setHours(0, 0, 0, 0);
+        return recordDate.getTime() === targetDate.getTime();
+      });
+
+      return {
+        playerId: player._id,
+        name: player.short_name,
+        attendance: hasAttendance
+      };
+    });
+
+    res.status(200).json(result);
+  } catch (err) {
+    console.error("Error fetching full attendance:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+//get player by parent ID
+export const getPlayerByParent = async (req: Request, res: Response) => {
+  try {
+    const authReq = req as Request & { user?: any };
+    const parentId = authReq.user?.id; // assuming JWT has user.id
+
+    if (!parentId) {
+       res.status(401).json({ error: "Unauthorized" });
+       return;
+    }
+
+    const player = await Player.findOne({ parentId });
+
+    if (!player) {
+      res.status(404).json({ error: "No player found for this parent" });
+      return;
+    }
+
+    res.status(200).json(player);
+  } catch (err) {
+    console.error("Error fetching player's data for parent:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
