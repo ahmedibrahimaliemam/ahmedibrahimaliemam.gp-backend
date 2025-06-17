@@ -8,9 +8,11 @@ const router = express.Router();
 // GET /api/parents/player/:playerId
 // → only parents can call, and only for players they own
 router.get(
-  "/player/:playerId",
+  "/players",
   verifyParent,
   getPlayerAndMatchesForParent
 );
+
+
 
 export default router;

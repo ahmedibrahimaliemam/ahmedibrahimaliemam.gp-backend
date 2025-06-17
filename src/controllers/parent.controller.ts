@@ -6,40 +6,44 @@ import Match from "../models/match.model";
 import axios from 'axios';
 
 
+
+
 export const getPlayerAndMatchesForParent: RequestHandler = async (req, res) => {
   try {
-    const parentId = (req as any).user._id;         // from verifyParent
-    const { playerId } = req.params;
+    const parentId = (req as any).user._id;
 
-    // 1) Load parent and verify they own this player
     const parent = await Parent.findById(parentId);
     if (!parent) {
       res.status(404).json({ message: "Parent not found" });
-      return
-    }
-    if (!parent.players.includes(playerId)) {
-       res.status(403).json({ message: "You are not authorized to view this player" });
-       return;
-    }
-
-    // 2) Load the player profile
-    const player = await Player.findById(playerId).select("-password");
-    if (!player) {
-      res.status(404).json({ message: "Player not found" });
       return;
     }
 
-    // 3) Load all matches where this player’s team plays
-    const teamId = player.Team_name;
-    const matches = await Match.find({
-      $or: [{ team1: teamId }, { team2: teamId }]
-    }).sort({ date: -1 });
+    const players = await Player.find({ _id: { $in: parent.players } }).select("-password");
 
-    // 4) Return everything
-    res.json({ player, matches });
+    if (!players.length) {
+      res.status(404).json({ message: "No players found for this parent" });
+      return;
+    }
+
+    const playersWithMatches = await Promise.all(
+      players.map(async (player) => {
+        const matches = await Match.find({
+          $or: [{ team1: player.Team_name }, { team2: player.Team_name }]
+        }).sort({ date: -1 });
+
+        return {
+          player,
+          matches
+        };
+      })
+    );
+
+    res.json({ players: playersWithMatches });
   } catch (error) {
-    console.error("Error in parent fetching player:", error);
+    console.error("Error fetching parent’s player data:", error);
     res.status(500).json({ message: "Server error", error });
   }
 };
+
+
 

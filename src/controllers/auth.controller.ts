@@ -190,35 +190,12 @@ const login: RequestHandler = async (req, res): Promise<void> => {
 
     const token = generateToken(user._id, role);
 
-    if (role === "parent") {
-      const parent = user as IParent;
-
-      const players = await Player.find({
-        _id: { $in: parent.players },
-      }).select("-password");
 
       res.json({
         message: "Login successful",
         token,
-        parent: {
-          id: parent._id,
-          name: parent.name,
-          email: parent.email,
-        },
-        players,
       });
-    } else {
-      res.json({
-        message: "Login successful",
-        token,
-        user: {
-          id: user._id,
-          role,
-          name: user.name,
-          email: user.email,
-        },
-      });
-    }
+    
   } catch (error) {
     console.error("Login error:", error);
     res.status(500).json({ message: "Error logging in", error });
