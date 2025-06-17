@@ -180,34 +180,10 @@ const login = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             return;
         }
         const token = generateToken(user._id, role);
-        if (role === "parent") {
-            const parent = user;
-            const players = yield player_model_1.default.find({
-                _id: { $in: parent.players },
-            }).select("-password");
-            res.json({
-                message: "Login successful",
-                token,
-                parent: {
-                    id: parent._id,
-                    name: parent.name,
-                    email: parent.email,
-                },
-                players,
-            });
-        }
-        else {
-            res.json({
-                message: "Login successful",
-                token,
-                user: {
-                    id: user._id,
-                    role,
-                    name: user.name,
-                    email: user.email,
-                },
-            });
-        }
+        res.json({
+            message: "Login successful",
+            token,
+        });
     }
     catch (error) {
         console.error("Login error:", error);

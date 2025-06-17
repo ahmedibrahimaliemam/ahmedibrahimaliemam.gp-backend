@@ -10,5 +10,5 @@ const verifyParent_middleware_1 = require("../middlewars/verifyParent.middleware
 const router = express_1.default.Router();
 // GET /api/parents/player/:playerId
 // → only parents can call, and only for players they own
-router.get("/player/:playerId", verifyParent_middleware_1.verifyParent, parent_controller_1.getPlayerAndMatchesForParent);
+router.get("/players", verifyParent_middleware_1.verifyParent, parent_controller_1.getPlayerAndMatchesForParent);
 exports.default = router;
