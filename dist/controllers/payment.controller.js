@@ -12,35 +12,39 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.initiateSubscriptionPayment = void 0;
+exports.paymobCallback = exports.initiateSubscriptionPayment = void 0;
 const axios_1 = __importDefault(require("axios"));
 const parent_model_1 = __importDefault(require("../models/parent.model"));
 const dotenv_1 = __importDefault(require("dotenv"));
 dotenv_1.default.config();
-//payment
+// STEP 1: Initiate Subscription Payment
 const initiateSubscriptionPayment = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
-    const { parentId, amount } = req.body;
+    const { amount } = req.body;
+    const parentId = req.user._id;
     const parent = yield parent_model_1.default.findById(parentId);
     if (!parent) {
         res.status(404).json({ message: "Parent not found" });
         return;
     }
     try {
-        // 1. Get Auth Token
+        // Get Paymob Token
         const { data: authResp } = yield axios_1.default.post("https://accept.paymob.com/api/auth/tokens", {
-            api_key: process.env.PAYMOB_API_KEY
+            api_key: process.env.PAYMOB_API_KEY,
         });
         const token = authResp.token;
-        // 2. Create Order
+        // Create Order
         const { data: orderResp } = yield axios_1.default.post("https://accept.paymob.com/api/ecommerce/orders", {
             auth_token: token,
             delivery_needed: false,
             amount_cents: (amount * 100).toString(),
             currency: "EGP",
-            items: []
+            items: [],
         });
-        // 3. Payment Key
+        // Save Paymob Order ID to Parent
+        parent.paymobOrderId = orderResp.id;
+        yield parent.save();
+        // Create Payment Key
         const { data: payKeyResp } = yield axios_1.default.post("https://accept.paymob.com/api/acceptance/payment_keys", {
             auth_token: token,
             amount_cents: (amount * 100).toString(),
@@ -58,15 +62,13 @@ const initiateSubscriptionPayment = (req, res) => __awaiter(void 0, void 0, void
                 postal_code: "NA",
                 city: "Cairo",
                 country: "EG",
-                last_name: "Farhan",
+                last_name: "N/A",
                 state: "Cairo"
             },
             currency: "EGP",
-            integration_id: Number(process.env.PAYMOB_INTEGRATION_ID)
+            integration_id: Number(process.env.PAYMOB_INTEGRATION_ID),
         });
-        const paymentToken = payKeyResp.token;
-        // 4. Send iframe link to frontend
-        const iframeURL = `https://accept.paymob.com/api/acceptance/iframes/${process.env.PAYMOB_IFRAME_ID}?payment_token=${paymentToken}`;
+        const iframeURL = `https://accept.paymob.com/api/acceptance/iframes/${process.env.PAYMOB_IFRAME_ID}?payment_token=${payKeyResp.token}`;
         res.json({ iframeURL });
     }
     catch (error) {
@@ -75,3 +77,30 @@ const initiateSubscriptionPayment = (req, res) => __awaiter(void 0, void 0, void
     }
 });
 exports.initiateSubscriptionPayment = initiateSubscriptionPayment;
+const paymobCallback = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    try {
+        console.log("Paymob callback received:", req.body);
+        const { obj } = req.body;
+        if (!((_a = obj === null || obj === void 0 ? void 0 : obj.order) === null || _a === void 0 ? void 0 : _a.id)) {
+            res.status(400).json({ message: "Invalid callback payload" });
+            return;
+        }
+        const parent = yield parent_model_1.default.findOne({ paymobOrderId: obj.order.id });
+        if (!parent) {
+            res.status(404).json({ message: "Parent not found for order" });
+            return;
+        }
+        if (obj.success) {
+            parent.isSubscribed = true;
+            parent.subscriptionExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
+            yield parent.save();
+        }
+        res.status(200).json({ message: "Payment status processed" });
+    }
+    catch (err) {
+        console.error("Callback error:", err);
+        res.status(500).json({ message: "Internal server error" });
+    }
+});
+exports.paymobCallback = paymobCallback;

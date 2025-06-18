@@ -40,7 +40,10 @@ const ParentSchema = new mongoose_1.Schema({
     name: { type: String, required: true },
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
-    players: [{ type: String, ref: "Player" }], // Relationship: each parent's children (players)
+    players: [{ type: String, ref: "Player" }],
+    paymobOrderId: { type: String, default: null },
+    isSubscribed: { type: Boolean, default: false },
+    subscriptionExpiresAt: { type: Date, default: null } // Relationship: each parent's children (players)
 }, { timestamps: true } // Automatically adds createdAt and updatedAt fields
 );
 exports.default = mongoose_1.default.model("Parent", ParentSchema);

@@ -18,6 +18,7 @@ const fs_1 = __importDefault(require("fs"));
 const player_model_1 = __importDefault(require("../models/player.model"));
 const team_model_1 = __importDefault(require("../models/team.model"));
 const importPlayersFromExcel = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
     try {
         if (!req.file) {
             res.status(400).json({ message: 'No file uploaded' });
@@ -30,18 +31,21 @@ const importPlayersFromExcel = (req, res) => __awaiter(void 0, void 0, void 0, f
         const validPlayers = [];
         const rejectedPlayers = [];
         for (const player of playersData) {
-            const teamExists = yield team_model_1.default.exists({ _id: player.Team_name });
+            const teamId = ((_a = player.Team_name) === null || _a === void 0 ? void 0 : _a._id) || player.Team_name; // لو جاي من الإكسل كـ object
+            const teamExists = yield team_model_1.default.exists({ _id: teamId });
             if (teamExists) {
-                validPlayers.push(player);
-                const team = yield team_model_1.default.findById(player.Team_name);
-                // ✅ Optionally, push player to the team.players array
-                team === null || team === void 0 ? void 0 : team.players.push(player);
-                yield (team === null || team === void 0 ? void 0 : team.save());
+                const formattedPlayer = Object.assign(Object.assign({}, player), { Team_name: teamId, parentId: player.parentId || undefined, _id: player._id || player.short_name });
+                validPlayers.push(formattedPlayer);
+                const team = yield team_model_1.default.findById(teamId);
+                if (team) {
+                    team.players.push(formattedPlayer._id);
+                    yield team.save();
+                }
             }
             else {
                 rejectedPlayers.push({
                     player,
-                    reason: `Team '${player.Team_name}' not found in database`,
+                    reason: `Team '${teamId}' not found in database`,
                 });
             }
         }

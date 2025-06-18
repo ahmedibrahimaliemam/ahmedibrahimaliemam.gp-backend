@@ -2,35 +2,41 @@ import axios from "axios";
 import Parent from "../models/parent.model";
 import { RequestHandler } from "express";
 import dotenv from "dotenv";
+
 dotenv.config();
-//payment
+
+// STEP 1: Initiate Subscription Payment
 export const initiateSubscriptionPayment: RequestHandler = async (req, res) => {
-  const { parentId, amount } = req.body;
+  const { amount } = req.body;
+  const parentId = (req as any).user._id;
 
   const parent = await Parent.findById(parentId);
-  if (!parent) 
-    { 
-      res.status(404).json({ message: "Parent not found" });
-      return;
-    }
+  if (!parent)
+  {
+   res.status(404).json({ message: "Parent not found" });
+   return;
+  }
   try {
-    // 1. Get Auth Token
+    // Get Paymob Token
     const { data: authResp } = await axios.post("https://accept.paymob.com/api/auth/tokens", {
-      api_key: process.env.PAYMOB_API_KEY
+      api_key: process.env.PAYMOB_API_KEY,
     });
-
     const token = authResp.token;
 
-    // 2. Create Order
+    // Create Order
     const { data: orderResp } = await axios.post("https://accept.paymob.com/api/ecommerce/orders", {
       auth_token: token,
       delivery_needed: false,
       amount_cents: (amount * 100).toString(),
       currency: "EGP",
-      items: []
+      items: [],
     });
 
-    // 3. Payment Key
+    // Save Paymob Order ID to Parent
+    parent.paymobOrderId = orderResp.id;
+    await parent.save();
+
+    // Create Payment Key
     const { data: payKeyResp } = await axios.post("https://accept.paymob.com/api/acceptance/payment_keys", {
       auth_token: token,
       amount_cents: (amount * 100).toString(),
@@ -48,21 +54,49 @@ export const initiateSubscriptionPayment: RequestHandler = async (req, res) => {
         postal_code: "NA",
         city: "Cairo",
         country: "EG",
-        last_name: "Farhan",
+        last_name: "N/A",
         state: "Cairo"
       },
       currency: "EGP",
-      integration_id: Number(process.env.PAYMOB_INTEGRATION_ID)
+      integration_id: Number(process.env.PAYMOB_INTEGRATION_ID),
     });
 
-    const paymentToken = payKeyResp.token;
-
-    // 4. Send iframe link to frontend
-    const iframeURL = `https://accept.paymob.com/api/acceptance/iframes/${process.env.PAYMOB_IFRAME_ID}?payment_token=${paymentToken}`;
+    const iframeURL = `https://accept.paymob.com/api/acceptance/iframes/${process.env.PAYMOB_IFRAME_ID}?payment_token=${payKeyResp.token}`;
     res.json({ iframeURL });
 
-  } catch (error:any) {
+  } catch (error: any) {
     console.error("Payment error:", error.response?.data || error.message);
     res.status(500).json({ message: "Error initiating payment", error });
+  }
+};
+
+
+export const paymobCallback: RequestHandler = async (req, res) => {
+  try {
+    console.log("Paymob callback received:", req.body);
+
+    const { obj } = req.body;
+
+    if (!obj?.order?.id) {
+      res.status(400).json({ message: "Invalid callback payload" });
+      return;
+    }
+
+    const parent = await Parent.findOne({ paymobOrderId: obj.order.id });
+    if (!parent) {
+      res.status(404).json({ message: "Parent not found for order" });
+      return; 
+    }
+
+    if (obj.success) {
+      parent.isSubscribed = true;
+      parent.subscriptionExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
+      await parent.save();
+    }
+
+    res.status(200).json({ message: "Payment status processed" });
+  } catch (err) {
+    console.error("Callback error:", err);
+    res.status(500).json({ message: "Internal server error" });
   }
 };

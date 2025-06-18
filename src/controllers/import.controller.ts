@@ -9,7 +9,7 @@ export const importPlayersFromExcel: RequestHandler = async (req, res) => {
   try {
     if (!req.file) {
       res.status(400).json({ message: 'No file uploaded' });
-      return
+      return;
     }
 
     const workbook = xlsx.readFile(req.file.path);
@@ -21,24 +21,36 @@ export const importPlayersFromExcel: RequestHandler = async (req, res) => {
     const rejectedPlayers = [];
 
     for (const player of playersData) {
-      const teamExists = await Team.exists({ _id: player.Team_name });
+      const teamId = player.Team_name?._id || player.Team_name; // لو جاي من الإكسل كـ object
+
+      const teamExists = await Team.exists({ _id: teamId });
 
       if (teamExists) {
-        validPlayers.push(player);
-        const team = await Team.findById(player.Team_name);
+        const formattedPlayer = {
+          ...player,
+          Team_name: teamId,       
+          parentId: player.parentId || undefined, 
+          _id: player._id || player.short_name,           
+        };
 
-              // ✅ Optionally, push player to the team.players array
-              team?.players.push(player);
-             await team?.save();
-      
+        validPlayers.push(formattedPlayer);
+
+       
+        const team = await Team.findById(teamId);
+        if (team) {
+          team.players.push(formattedPlayer._id); 
+          await team.save();
+        }
+
       } else {
         rejectedPlayers.push({
           player,
-          reason: `Team '${player.Team_name}' not found in database`,
+          reason: `Team '${teamId}' not found in database`,
         });
       }
     }
 
+    
     const insertedPlayers = await Player.insertMany(validPlayers);
 
     fs.unlinkSync(req.file.path);
