@@ -345,9 +345,13 @@ exports.markMultipleAttendances = markMultipleAttendances;
 //get full attendance
 const getFullAttendanceByDate = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const { date } = req.query;
+        const { date, teamId } = req.query;
         if (!date || typeof date !== "string") {
             res.status(400).json({ error: "Please provide a valid date in YYYY-MM-DD format." });
+            return;
+        }
+        if (!teamId || typeof teamId !== "string") {
+            res.status(400).json({ error: "Please provide a valid teamId." });
             return;
         }
         const targetDate = new Date(date);
@@ -356,10 +360,9 @@ const getFullAttendanceByDate = (req, res) => __awaiter(void 0, void 0, void 0, 
             return;
         }
         targetDate.setHours(0, 0, 0, 0);
-        const nextDay = new Date(targetDate);
-        nextDay.setDate(nextDay.getDate() + 1);
-        // Fetch all players
-        const players = yield player_model_1.default.find().select("_id short_name attendance");
+        // Find players by teamId
+        const players = yield player_model_1.default.find({ Team_name: teamId }).select("_id short_name attendance");
+        console.log(players);
         const result = players.map(player => {
             var _a;
             const hasAttendance = (_a = player.attendance) === null || _a === void 0 ? void 0 : _a.some(record => {
@@ -376,7 +379,7 @@ const getFullAttendanceByDate = (req, res) => __awaiter(void 0, void 0, void 0, 
         res.status(200).json(result);
     }
     catch (err) {
-        console.error("Error fetching full attendance:", err);
+        console.error("Error fetching team attendance:", err);
         res.status(500).json({ error: "Internal server error" });
     }
 });

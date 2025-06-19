@@ -86,36 +86,49 @@ const registerAdmin: RequestHandler = async (req, res): Promise<void> => {
 };
 
 // ✅ Register Coach
-export const registerCoach: RequestHandler = async (req, res): Promise<void> => {
+
+export const registerCoach: RequestHandler = async (req, res) => {
   try {
-    const { name, email, phoneNumber, teamId, password } = req.body;
+    const {  name, email, teamId, phoneNumber, password } = req.body;
 
-    // Check if coach with the given email already exists.
-    const existingCoach = await Coach.findOne({ email });
+    // Check if coach already exists
+    const existingCoach = await Coach.findById(name);
+    const existTeam=await Team.findById(teamId);
+    if(!existTeam)
+    {
+     res.status(400).json({ message: `Team with ID ${teamId} does not exist.` });
+     return;
+    }
     if (existingCoach) {
-      res.status(400).json({ message: "Email already in use" });
+      res.status(400).json({ message: "Coach already exists" });
       return;
     }
 
-    // Check if the provided teamId exists in the Team collection.
-    const team = await Team.findById(teamId);
-    if (!team) {
-      res.status(400).json({ message: "Team does not exist" });
-      return;
-      
-    }
-
+    // Hash the password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create the coach; here _id is set to name (adjust as required for your application)
-    const coach = await Coach.create({ _id: name, name, email, phoneNumber, teamId, password: hashedPassword });
+    // Create the coach
+    const coach = new Coach({
+      _id:name, // can be phone number or something like "C.Ahmed"
+      name,
+      email,
+      teamId,
+      phoneNumber,
+      password: hashedPassword,
+    });
 
-    res.status(201).json({ message: "Coach registered", token: generateToken(coach._id, "coach") });
-    
+    await coach.save();
+
+    // Link the coach to the team
+    await Team.updateOne({ _id: teamId }, { $set: { coachId: coach._id } });
+
+    res.status(201).json({ message: "Coach registered and linked to team successfully", coach });
   } catch (error) {
-    res.status(500).json({ message: "Error registering coach", error });
+    console.error("Error registering coach:", error);
+    res.status(500).json({ message: "Internal server error" });
   }
 };
+
 
 // ✅ Register Parent (Admin only)
  const registerParent: RequestHandler = async (req, res): Promise<void> => {

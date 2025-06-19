@@ -92,26 +92,37 @@ exports.registerAdmin = registerAdmin;
 // ✅ Register Coach
 const registerCoach = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const { name, email, phoneNumber, teamId, password } = req.body;
-        // Check if coach with the given email already exists.
-        const existingCoach = yield coach_model_1.default.findOne({ email });
+        const { name, email, teamId, phoneNumber, password } = req.body;
+        // Check if coach already exists
+        const existingCoach = yield coach_model_1.default.findById(name);
+        const existTeam = yield team_model_1.default.findById(teamId);
+        if (!existTeam) {
+            res.status(400).json({ message: `Team with ID ${teamId} does not exist.` });
+            return;
+        }
         if (existingCoach) {
-            res.status(400).json({ message: "Email already in use" });
+            res.status(400).json({ message: "Coach already exists" });
             return;
         }
-        // Check if the provided teamId exists in the Team collection.
-        const team = yield team_model_1.default.findById(teamId);
-        if (!team) {
-            res.status(400).json({ message: "Team does not exist" });
-            return;
-        }
+        // Hash the password
         const hashedPassword = yield bcryptjs_1.default.hash(password, 10);
-        // Create the coach; here _id is set to name (adjust as required for your application)
-        const coach = yield coach_model_1.default.create({ _id: name, name, email, phoneNumber, teamId, password: hashedPassword });
-        res.status(201).json({ message: "Coach registered", token: generateToken(coach._id, "coach") });
+        // Create the coach
+        const coach = new coach_model_1.default({
+            _id: name, // can be phone number or something like "C.Ahmed"
+            name,
+            email,
+            teamId,
+            phoneNumber,
+            password: hashedPassword,
+        });
+        yield coach.save();
+        // Link the coach to the team
+        yield team_model_1.default.updateOne({ _id: teamId }, { $set: { coachId: coach._id } });
+        res.status(201).json({ message: "Coach registered and linked to team successfully", coach });
     }
     catch (error) {
-        res.status(500).json({ message: "Error registering coach", error });
+        console.error("Error registering coach:", error);
+        res.status(500).json({ message: "Internal server error" });
     }
 });
 exports.registerCoach = registerCoach;

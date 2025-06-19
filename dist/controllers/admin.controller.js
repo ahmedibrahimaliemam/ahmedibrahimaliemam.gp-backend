@@ -39,8 +39,8 @@ exports.addTeam = addTeam;
 const getAllTeamsWithCoaches = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const teams = yield team_model_1.default.find()
-            .populate("coachId")
-            .populate("players");
+            .populate({ path: "coachId", select: "name" }) // Explicit fields
+            .populate({ path: "players" });
         const teamsWithFilteredMatches = yield Promise.all(teams.map((team) => __awaiter(void 0, void 0, void 0, function* () {
             // Fetch matches where team is either team1 or team2
             const filteredMatches = yield match_model_1.default.find({
