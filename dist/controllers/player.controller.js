@@ -297,43 +297,54 @@ const getAttendanceByDate = (req, res) => __awaiter(void 0, void 0, void 0, func
 exports.getAttendanceByDate = getAttendanceByDate;
 // ... other functions ...
 const markMultipleAttendances = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a, _b;
+    var _a;
     try {
-        console.log(`tryyyyyy`);
         const { playerIds, source } = req.body;
-        if (!Array.isArray(playerIds) || playerIds.length === 0) {
-            res.status(400).json({ error: "playerIds must be a non-empty array." });
+        const { teamId } = req.query;
+        if (!teamId || typeof teamId !== "string") {
+            res.status(400).json({ error: "teamId is required in query params." });
+            return;
+        }
+        if (!Array.isArray(playerIds)) {
+            res.status(400).json({ error: "playerIds must be an array." });
             return;
         }
         const today = new Date();
         today.setHours(0, 0, 0, 0);
-        const updatedPlayers = [];
-        for (const id of playerIds) {
-            const player = yield player_model_1.default.findById(id);
-            if (!player)
-                continue;
+        // Fetch all players in the team
+        const teamPlayers = yield player_model_1.default.find({ Team_name: teamId });
+        const markedPlayers = {
+            present: [],
+            absent: []
+        };
+        for (const player of teamPlayers) {
             const alreadyMarked = (_a = player.attendance) === null || _a === void 0 ? void 0 : _a.some(record => {
                 const recordDate = new Date(record.date);
                 recordDate.setHours(0, 0, 0, 0);
                 return recordDate.getTime() === today.getTime();
             });
             if (!alreadyMarked) {
-                (_b = player.attendance) === null || _b === void 0 ? void 0 : _b.push({
+                const isPresent = playerIds.includes(player._id);
+                player.attendance = player.attendance || [];
+                player.attendance.push({
                     date: new Date(),
-                    present: true,
-                    checkedInAt: new Date(),
-                    source: source || "face_recognition"
+                    present: isPresent,
+                    checkedInAt: isPresent ? new Date() : undefined,
+                    source: isPresent ? (source || "face_recognition") : "auto_marked"
                 });
                 yield player.save();
-                updatedPlayers.push({
-                    playerId: player._id,
-                    name: player.short_name
-                });
+                const record = { playerId: player._id, name: player.short_name };
+                if (isPresent) {
+                    markedPlayers.present.push(record);
+                }
+                else {
+                    markedPlayers.absent.push(record);
+                }
             }
         }
         res.status(200).json({
-            message: `Attendance marked for ${updatedPlayers.length} players.`,
-            marked: updatedPlayers
+            message: `Attendance marked for ${markedPlayers.present.length} present and ${markedPlayers.absent.length} absent players.`,
+            marked: markedPlayers
         });
     }
     catch (err) {
@@ -360,15 +371,14 @@ const getFullAttendanceByDate = (req, res) => __awaiter(void 0, void 0, void 0, 
             return;
         }
         targetDate.setHours(0, 0, 0, 0);
-        // Find players by teamId
         const players = yield player_model_1.default.find({ Team_name: teamId }).select("_id short_name attendance");
-        console.log(players);
         const result = players.map(player => {
             var _a;
             const hasAttendance = (_a = player.attendance) === null || _a === void 0 ? void 0 : _a.some(record => {
                 const recordDate = new Date(record.date);
                 recordDate.setHours(0, 0, 0, 0);
-                return recordDate.getTime() === targetDate.getTime();
+                return (recordDate.getTime() === targetDate.getTime() &&
+                    record.present === true);
             });
             return {
                 playerId: player._id,

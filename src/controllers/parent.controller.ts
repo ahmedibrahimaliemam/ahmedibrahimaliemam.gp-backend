@@ -10,6 +10,7 @@ import axios from 'axios';
 
 export const getPlayerAndMatchesForParent: RequestHandler = async (req, res) => {
   try {
+   
     const parentId = (req as any).user._id;
 
     const parent = await Parent.findById(parentId);
