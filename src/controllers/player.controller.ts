@@ -341,7 +341,6 @@ export const markMultipleAttendances = async (req: Request, res: Response) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // Fetch all players in the team
     const teamPlayers = await Player.find({ Team_name: teamId });
 
     const markedPlayers = {
@@ -350,31 +349,38 @@ export const markMultipleAttendances = async (req: Request, res: Response) => {
     };
 
     for (const player of teamPlayers) {
-      const alreadyMarked = player.attendance?.some(record => {
+      const isPresent = playerIds.includes(player._id.toString());
+
+      player.attendance = player.attendance || [];
+
+      const existingIndex = player.attendance.findIndex(record => {
         const recordDate = new Date(record.date);
         recordDate.setHours(0, 0, 0, 0);
         return recordDate.getTime() === today.getTime();
       });
 
-      if (!alreadyMarked) {
-        const isPresent = playerIds.includes(player._id);
+      const newAttendance = {
+        date: new Date(),
+        present: isPresent,
+        checkedInAt: isPresent ? new Date() : undefined,
+        source: isPresent ? (source || "face_recognition") : "auto_marked"
+      };
 
-        player.attendance = player.attendance || [];
-        player.attendance.push({
-          date: new Date(),
-          present: isPresent,
-          checkedInAt: isPresent ? new Date() : undefined,
-          source: isPresent ? (source || "face_recognition") : "auto_marked"
-        });
+      if (existingIndex !== -1) {
+        // update existing
+        player.attendance[existingIndex] = newAttendance;
+      } else {
+        // add new
+        player.attendance.push(newAttendance);
+      }
 
-        await player.save();
+      await player.save();
 
-        const record = { playerId: player._id, name: player.short_name };
-        if (isPresent) {
-          markedPlayers.present.push(record);
-        } else {
-          markedPlayers.absent.push(record);
-        }
+      const record = { playerId: player._id.toString(), name: player.short_name };
+      if (isPresent) {
+        markedPlayers.present.push(record);
+      } else {
+        markedPlayers.absent.push(record);
       }
     }
 
@@ -387,6 +393,7 @@ export const markMultipleAttendances = async (req: Request, res: Response) => {
     res.status(500).json({ error: "Internal server error" });
   }
 };
+
 
 
 //get full attendance
@@ -415,19 +422,16 @@ export const getFullAttendanceByDate = async (req: Request, res: Response) => {
     const players = await Player.find({ Team_name: teamId }).select("_id short_name attendance");
 
     const result = players.map(player => {
-      const hasAttendance = player.attendance?.some(record => {
+      const attendanceRecord = player.attendance?.find(record => {
         const recordDate = new Date(record.date);
         recordDate.setHours(0, 0, 0, 0);
-        return (
-          recordDate.getTime() === targetDate.getTime() &&
-          record.present === true
-        );
+        return recordDate.getTime() === targetDate.getTime();
       });
 
       return {
         playerId: player._id,
         name: player.short_name,
-        attendance: hasAttendance
+        attendance: attendanceRecord?.present ?? null // true / false / null (not marked)
       };
     });
 
@@ -437,6 +441,7 @@ export const getFullAttendanceByDate = async (req: Request, res: Response) => {
     res.status(500).json({ error: "Internal server error" });
   }
 };
+
 
 
 //get player by parent ID

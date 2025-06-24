@@ -1,6 +1,6 @@
 import mongoose, { Schema, Document } from "mongoose";
 
-interface ITeam extends Document {
+export interface ITeam extends Document {
   _id: string;          // Team ID as string
   name: string;
   logo:string;

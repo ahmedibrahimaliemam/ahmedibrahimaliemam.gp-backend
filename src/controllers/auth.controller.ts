@@ -8,6 +8,9 @@ import Parent, { IParent } from "../models/parent.model";
 import Coach from "../models/coach.model";
 import Admin from "../models/admin.model";
 import Player from "../models/player.model";
+import { Model } from "mongoose";
+import { ICoach } from "../models/coach.model";
+import { IAdmin } from "../models/admin.model";
 
 
 
@@ -235,4 +238,71 @@ export {
   validateRegistration,
   handleValidationErrors,
   verifyAdmin,
+};
+//change password 
+
+
+
+const getModelByRole = (role: string): Model<any> | null => {
+  if (role === "parent") return Parent;
+  if (role === "coach") return Coach;
+  if (role === "admin") return Admin;
+  return null;
+};
+
+export const changePassword = async (req: Request, res: Response) => {
+  try {
+    const { oldPassword, newPassword, confirmPassword } = req.body;
+    //const authReq = req as Request & { user?: { _id: string; role: string } };
+    const authReq = req as Request & { user?: any };
+console.log(authReq.user);
+
+    const userId = authReq.user?._id;
+    const role = authReq.user?.role;
+
+    if (!userId || !role) {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
+
+    if (!oldPassword || !newPassword || !confirmPassword) {
+      res.status(400).json({ error: "All fields are required." });
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      res.status(400).json({ error: "New passwords do not match." });
+      return;
+    }
+
+    const Model = getModelByRole(role);
+
+    if (!Model) {
+      res.status(400).json({ error: "Invalid role." });
+      return;
+    }
+
+    const user = await Model.findById(userId);
+
+    if (!user) {
+      res.status(404).json({ error: "User not found." });
+      return;
+    }
+
+    const isMatch = await bcrypt.compare(oldPassword, user.password);
+
+    if (!isMatch) {
+      res.status(400).json({ error: "Old password is incorrect." });
+      return;
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    user.password = hashedPassword;
+    await user.save();
+
+    res.status(200).json({ message: "Password changed successfully." });
+  } catch (err) {
+    console.error("Error changing password:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
 };
